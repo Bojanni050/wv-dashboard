@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>White Vision — Analytics Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.5/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="dashboard">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <div class="brand">
+          <svg class="diamond" width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M14 1L27 14L14 27L1 14L14 1Z" stroke="#c8a96b" stroke-width="1.5" />
+            <path d="M14 7L21 14L14 21L7 14L14 7Z" fill="#c8a96b" fill-opacity="0.15" stroke="#c8a96b" stroke-width="1" />
+          </svg>
+          <div class="brand-text">
+            <h1>White Vision</h1>
+            <p class="tagline">Uniek. Stijlvol. Onvergetelijk.</p>
+          </div>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="period-selector">
+          <button class="period-btn active" data-range="7">7 dagen</button>
+          <button class="period-btn" data-range="28">28 dagen</button>
+          <button class="period-btn" data-range="90">90 dagen</button>
+        </div>
+        <div class="refresh-info">
+          <span class="refresh-dot"></span>
+          <span class="refresh-text">Auto-refresh 30 min</span>
+          <span class="last-updated">Laatst bijgewerkt: —</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- KPI Tiles -->
+    <section class="kpi-grid" id="kpiGrid">
+      <div class="kpi-tile">
+        <p class="kpi-label">Sessies</p>
+        <p class="kpi-value" id="kpi-sessions">—</p>
+        <p class="kpi-change" id="kpi-sessions-change"></p>
+      </div>
+      <div class="kpi-tile">
+        <p class="kpi-label">Gebruikers</p>
+        <p class="kpi-value" id="kpi-users">—</p>
+        <p class="kpi-change" id="kpi-users-change"></p>
+      </div>
+      <div class="kpi-tile">
+        <p class="kpi-label">Paginaweergaven</p>
+        <p class="kpi-value" id="kpi-pageviews">—</p>
+        <p class="kpi-change" id="kpi-pageviews-change"></p>
+      </div>
+      <div class="kpi-tile">
+        <p class="kpi-label">Offerteaanvragen</p>
+        <p class="kpi-value" id="kpi-offertes">—</p>
+        <p class="kpi-change" id="kpi-offertes-change"></p>
+      </div>
+    </section>
+
+    <!-- Charts -->
+    <section class="charts-grid">
+      <div class="chart-card chart-line">
+        <h2 class="card-title">Dagelijkse sessies</h2>
+        <p class="card-subtitle">Deze periode vs. vorige periode</p>
+        <div class="chart-wrap">
+          <canvas id="lineChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card chart-donut">
+        <h2 class="card-title">Sessies per kanaal</h2>
+        <p class="card-subtitle">Verdeling van verkeer</p>
+        <div class="chart-wrap">
+          <canvas id="donutChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Table -->
+    <section class="table-card">
+      <h2 class="card-title">Offerteaanvragen per pagina</h2>
+      <p class="card-subtitle">Aantal "offerte_form_succes" events per pagina</p>
+      <div class="table-wrap">
+        <table id="offerteTable">
+          <thead>
+            <tr>
+              <th>Pagina</th>
+              <th class="th-right">Aantal</th>
+            </tr>
+          </thead>
+          <tbody id="offerteTableBody">
+            <tr><td colspan="2" class="loading-row">Laden…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>White Vision Analytics Dashboard — <span id="footerRange">7 dagen</span></p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
