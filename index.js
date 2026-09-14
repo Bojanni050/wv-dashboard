@@ -36,7 +36,6 @@ function basicAuth(req, res, next) {
   const [scheme, encoded] = header.split(' ');
 
   if (scheme !== 'Basic' || !encoded) {
-    res.setHeader('WWW-Authenticate', 'Basic realm="White Vision Dashboard"');
     return res.status(401).json({ error: 'Authentication required' });
   }
 
@@ -52,7 +51,6 @@ function basicAuth(req, res, next) {
   const isViewer = !isAdmin && matches(viewerUser, viewerPass);
 
   if (!isAdmin && !isViewer) {
-    res.setHeader('WWW-Authenticate', 'Basic realm="White Vision Dashboard"');
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 

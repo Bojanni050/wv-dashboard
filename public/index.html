@@ -10,8 +10,32 @@
   <link rel="stylesheet" href="styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.5/dist/chart.umd.min.js"></script>
 </head>
-<body>
-  <div class="dashboard">
+<body class="is-locked">
+  <!-- Login overlay -->
+  <div class="login-overlay" id="loginOverlay">
+    <form class="login-modal" id="loginForm">
+      <svg class="diamond" width="32" height="32" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M14 1L27 14L14 27L1 14L14 1Z" stroke="#c8a96b" stroke-width="1.5" />
+        <path d="M14 7L21 14L14 21L7 14L14 7Z" fill="#c8a96b" fill-opacity="0.15" stroke="#c8a96b" stroke-width="1" />
+      </svg>
+      <h2 class="login-title">White Vision</h2>
+      <p class="login-subtitle">Log in om het dashboard te bekijken</p>
+
+      <label class="login-field">
+        <span>Gebruikersnaam</span>
+        <input type="text" id="loginUser" autocomplete="username" required />
+      </label>
+      <label class="login-field">
+        <span>Wachtwoord</span>
+        <input type="password" id="loginPass" autocomplete="current-password" required />
+      </label>
+
+      <button type="submit" id="loginSubmit">Inloggen</button>
+      <p class="login-error" id="loginError" hidden></p>
+    </form>
+  </div>
+
+  <div class="dashboard" id="dashboardRoot">
     <!-- Header -->
     <header class="header">
       <div class="header-left">

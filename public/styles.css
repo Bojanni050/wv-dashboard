@@ -36,6 +36,122 @@ body {
   max-width: 1600px;
   margin: 0 auto;
   padding: 32px 40px 48px;
+  transition: filter 0.2s ease;
+}
+
+body.is-locked .dashboard {
+  filter: blur(8px);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Login overlay */
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(9, 9, 9, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  padding: 20px;
+}
+
+.login-overlay[hidden] {
+  display: none;
+}
+
+.login-modal {
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: 40px 36px;
+  width: 360px;
+  max-width: 100%;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.login-modal .diamond {
+  margin-bottom: 16px;
+  animation: shimmer 4s ease-in-out infinite;
+}
+
+.login-title {
+  font-family: var(--font-heading);
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.login-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 6px;
+  margin-bottom: 28px;
+}
+
+.login-field {
+  width: 100%;
+  text-align: left;
+  margin-bottom: 16px;
+}
+
+.login-field span {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.login-field input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+
+.login-field input:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+#loginSubmit {
+  width: 100%;
+  background: var(--gold);
+  color: #090909;
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background 0.2s ease;
+}
+
+#loginSubmit:hover {
+  background: var(--gold-dim);
+}
+
+#loginSubmit:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.login-error {
+  color: var(--red);
+  font-size: 13px;
+  margin-top: 14px;
 }
 
 /* Header */
@@ -218,14 +334,25 @@ body {
 }
 
 .reports-download-link {
+  background: transparent;
+  border: none;
   color: var(--gold);
+  font-family: var(--font-body);
   font-size: 13px;
   font-weight: 600;
   text-decoration: none;
+  cursor: pointer;
+  padding: 0;
 }
 
 .reports-download-link:hover {
   text-decoration: underline;
+}
+
+.reports-download-link:disabled {
+  color: var(--text-dim);
+  cursor: default;
+  text-decoration: none;
 }
 
 .period-selector {

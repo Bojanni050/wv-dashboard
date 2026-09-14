@@ -7,6 +7,46 @@
   let lineChart = null;
   let donutChart = null;
   let refreshTimer = null;
+  let authHeader = sessionStorage.getItem('wv_auth') || null;
+  let booted = false;
+
+  // --- Auth ---
+  function lockUI() {
+    document.body.classList.add('is-locked');
+    document.getElementById('loginOverlay').hidden = false;
+  }
+
+  function unlockUI() {
+    document.body.classList.remove('is-locked');
+    document.getElementById('loginOverlay').hidden = true;
+  }
+
+  async function apiFetch(url, options) {
+    options = options || {};
+    var headers = Object.assign({}, options.headers || {});
+    if (authHeader) headers.Authorization = authHeader;
+    var res = await fetch(url, Object.assign({}, options, { headers: headers }));
+    if (res.status === 401) {
+      authHeader = null;
+      sessionStorage.removeItem('wv_auth');
+      lockUI();
+    }
+    return res;
+  }
+
+  async function boot() {
+    unlockUI();
+    if (booted) return;
+    booted = true;
+    fetchRole();
+    load(currentRange, currentCompare, currentCustomRange);
+    scheduleAutoRefresh();
+  }
+
+  async function tryBoot() {
+    var res = await apiFetch('/api/me');
+    if (res.ok) boot();
+  }
 
   var RANGE_LABELS = { '7': '7 dagen', '28': '28 dagen', '90': '90 dagen', month: 'deze maand', lastweek: 'vorige week' };
   var COMPARE_LABELS = { previous: 'vorige periode', year: 'zelfde periode vorig jaar' };
@@ -48,7 +88,7 @@
     if (range === 'custom' && customRange) {
       url += '&start=' + customRange.start + '&end=' + customRange.end;
     }
-    const res = await fetch(url, {
+    const res = await apiFetch(url, {
       headers: { Accept: 'application/json' },
     });
     if (!res.ok) {
@@ -489,7 +529,7 @@
 
   async function fetchRole() {
     try {
-      var res = await fetch('/api/me', { headers: { Accept: 'application/json' } });
+      var res = await apiFetch('/api/me', { headers: { Accept: 'application/json' } });
       if (!res.ok) return;
       var data = await res.json();
       isAdmin = data.role === 'admin';
@@ -502,7 +542,7 @@
   async function loadReports() {
     var body = document.getElementById('reportsTableBody');
     try {
-      var res = await fetch('/api/reports', { headers: { Accept: 'application/json' } });
+      var res = await apiFetch('/api/reports', { headers: { Accept: 'application/json' } });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       var reports = await res.json();
 
@@ -515,7 +555,8 @@
         .map(function (r) {
           return '<tr><td>' + escapeHtml(r.originalName) + '</td><td>' + formatReportDate(r.uploadedAt) +
             '</td><td class="th-right">' + formatFileSize(r.size) +
-            '</td><td class="th-right"><a class="reports-download-link" href="/api/reports/' + encodeURIComponent(r.id) + '">Download</a></td></tr>';
+            '</td><td class="th-right"><button type="button" class="reports-download-link" data-id="' + escapeHtml(r.id) +
+            '" data-name="' + escapeHtml(r.originalName) + '">Download</button></td></tr>';
         })
         .join('');
     } catch (err) {
@@ -523,6 +564,37 @@
       body.innerHTML = '<tr><td colspan="4" class="empty-row">Fout bij laden van rapporten</td></tr>';
     }
   }
+
+  document.getElementById('reportsTableBody').addEventListener('click', async function (e) {
+    var btn = e.target.closest('button[data-id]');
+    if (!btn) return;
+
+    var originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Bezig…';
+
+    try {
+      var res = await apiFetch('/api/reports/' + encodeURIComponent(btn.dataset.id));
+      if (!res.ok) throw new Error('Download mislukt');
+      var blob = await res.blob();
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = btn.dataset.name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Download error:', err);
+      btn.textContent = 'Mislukt';
+      setTimeout(function () { btn.textContent = originalText; }, 2000);
+      return;
+    }
+
+    btn.disabled = false;
+    btn.textContent = originalText;
+  });
 
   function setUploadStatus(message, isError) {
     var el = document.getElementById('reportUploadStatus');
@@ -545,7 +617,7 @@
 
     setUploadStatus('Uploaden…', false);
     try {
-      var res = await fetch('/api/reports', { method: 'POST', body: formData });
+      var res = await apiFetch('/api/reports', { method: 'POST', body: formData });
       var data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Upload mislukt');
 
@@ -558,8 +630,41 @@
     }
   });
 
+  // --- Login form ---
+  var loginForm = document.getElementById('loginForm');
+  var loginError = document.getElementById('loginError');
+  var loginSubmit = document.getElementById('loginSubmit');
+
+  loginForm.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var user = document.getElementById('loginUser').value;
+    var pass = document.getElementById('loginPass').value;
+    var candidate = 'Basic ' + btoa(user + ':' + pass);
+
+    loginError.hidden = true;
+    loginSubmit.disabled = true;
+    loginSubmit.textContent = 'Bezig…';
+
+    try {
+      var res = await fetch('/api/me', { headers: { Authorization: candidate } });
+      if (!res.ok) {
+        loginError.textContent = 'Onjuiste gebruikersnaam of wachtwoord.';
+        loginError.hidden = false;
+        return;
+      }
+      authHeader = candidate;
+      sessionStorage.setItem('wv_auth', candidate);
+      document.getElementById('loginPass').value = '';
+      boot();
+    } catch (err) {
+      loginError.textContent = 'Kon geen verbinding maken. Probeer opnieuw.';
+      loginError.hidden = false;
+    } finally {
+      loginSubmit.disabled = false;
+      loginSubmit.textContent = 'Inloggen';
+    }
+  });
+
   // --- Init ---
-  fetchRole();
-  load(currentRange, currentCompare, currentCustomRange);
-  scheduleAutoRefresh();
+  tryBoot();
 })();
