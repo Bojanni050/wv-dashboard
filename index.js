@@ -32,14 +32,10 @@ function basicAuth(req, res, next) {
   const decoded = Buffer.from(encoded, 'base64').toString('utf8');
   const [providedUser, providedPass] = decoded.split(':');
 
-  const userOk = crypto.timingSafeEqual(
-    Buffer.from(providedUser || ''),
-    Buffer.from(user)
-  );
-  const passOk = crypto.timingSafeEqual(
-    Buffer.from(providedPass || ''),
-    Buffer.from(pass)
-  );
+  const hash = (value) => crypto.createHash('sha256').update(value || '').digest();
+
+  const userOk = crypto.timingSafeEqual(hash(providedUser), hash(user));
+  const passOk = crypto.timingSafeEqual(hash(providedPass), hash(pass));
 
   if (!userOk || !passOk) {
     res.setHeader('WWW-Authenticate', 'Basic realm="White Vision Dashboard"');
@@ -78,19 +74,6 @@ function pctChange(current, previous) {
 }
 
 // --- GA4 API calls ---
-
-async function runReport(dimensions, metrics, dateRange, orderBys) {
-  const request = {
-    property: `properties/${PROPERTY_ID}`,
-    dateRanges: [{ startDate: dateRange.start, endDate: dateRange.end }],
-    dimensions: dimensions.map((name) => ({ name })),
-    metrics: metrics.map((name) => ({ name })),
-  };
-  if (orderBys) request.orderBys = orderBys;
-
-  const [response] = await analyticsDataClient.runReport(request);
-  return response;
-}
 
 async function fetchMetricsForRange(dateRange) {
   const [response] = await analyticsDataClient.runReport({
@@ -180,36 +163,6 @@ async function fetchDailySessions(dateRange, days) {
   return filled;
 }
 
-async function fetchDailySessionsPrev(dateRange, days) {
-  const [response] = await analyticsDataClient.runReport({
-    property: `properties/${PROPERTY_ID}`,
-    dateRanges: [{ startDate: dateRange.start, endDate: dateRange.end }],
-    dimensions: [{ name: 'date' }],
-    metrics: [{ name: 'sessions' }],
-    orderBys: [{ dimension: { dimensionName: 'date' }, orderType: 'NUMERIC' }],
-  });
-
-  const rows = (response.rows || []).map((row) => ({
-    date: row.dimensionValues[0].value,
-    sessions: parseInt(row.metricValues[0].value, 10),
-  }));
-
-  const filled = [];
-  const startDate = new Date(dateRange.start);
-  for (let i = 0; i < days; i++) {
-    const d = new Date(startDate);
-    d.setDate(startDate.getDate() + i);
-    const dateStr = formatDate(d);
-    const found = rows.find((r) => r.date === dateStr);
-    filled.push({
-      date: dateStr,
-      sessions: found ? found.sessions : 0,
-    });
-  }
-
-  return filled;
-}
-
 // --- Main endpoint ---
 
 app.get('/api/analytics', basicAuth, async (req, res) => {
@@ -231,7 +184,7 @@ app.get('/api/analytics', basicAuth, async (req, res) => {
       fetchChannels(ranges.current),
       fetchOfferteByPage(ranges.current),
       fetchDailySessions(ranges.current, rangeDays),
-      fetchDailySessionsPrev(ranges.previous, rangeDays),
+      fetchDailySessions(ranges.previous, rangeDays),
     ]);
 
     const offerteCount = offerteByPage.reduce((sum, r) => sum + r.count, 0);
