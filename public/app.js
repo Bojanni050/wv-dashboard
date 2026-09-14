@@ -242,20 +242,25 @@
     });
   }
 
-  // --- Table ---
-  function renderTable(data) {
-    var body = document.getElementById('offerteTableBody');
+  // --- Tables ---
+  function renderRowsTable(bodyId, rows, labelKey, emptyMessage) {
+    var body = document.getElementById(bodyId);
 
-    if (!data.offerteByPage || data.offerteByPage.length === 0) {
-      body.innerHTML = '<tr><td colspan="2" class="empty-row">Geen offerteaanvragen in deze periode</td></tr>';
+    if (!rows || rows.length === 0) {
+      body.innerHTML = '<tr><td colspan="2" class="empty-row">' + emptyMessage + '</td></tr>';
       return;
     }
 
-    body.innerHTML = data.offerteByPage
+    body.innerHTML = rows
       .map(function (r) {
-        return '<tr><td>' + escapeHtml(r.page) + '</td><td>' + formatNumber(r.count) + '</td></tr>';
+        return '<tr><td>' + escapeHtml(r[labelKey]) + '</td><td>' + formatNumber(r.count) + '</td></tr>';
       })
       .join('');
+  }
+
+  function renderTable(data) {
+    renderRowsTable('offerteTableBody', data.offerteByPage, 'page', 'Geen offerteaanvragen in deze periode');
+    renderRowsTable('offerteCampaignTableBody', data.offerteByCampaign, 'campaign', 'Geen offerteaanvragen via betaalde ads in deze periode');
   }
 
   function escapeHtml(str) {
@@ -285,8 +290,9 @@
       updateLastRefreshed();
     } catch (err) {
       console.error('Load error:', err);
-      var body = document.getElementById('offerteTableBody');
-      body.innerHTML = '<tr><td colspan="2" class="empty-row">Fout bij laden van gegevens</td></tr>';
+      var errorRow = '<tr><td colspan="2" class="empty-row">Fout bij laden van gegevens</td></tr>';
+      document.getElementById('offerteTableBody').innerHTML = errorRow;
+      document.getElementById('offerteCampaignTableBody').innerHTML = errorRow;
     }
   }
 

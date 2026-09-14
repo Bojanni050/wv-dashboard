@@ -175,6 +175,39 @@ async function fetchOfferteByChannel(dateRange) {
   }));
 }
 
+async function fetchOfferteByCampaign(dateRange) {
+  const [response] = await analyticsDataClient.runReport({
+    property: `properties/${PROPERTY_ID}`,
+    dateRanges: [{ startDate: dateRange.start, endDate: dateRange.end }],
+    dimensions: [{ name: 'sessionCampaignName' }],
+    metrics: [{ name: 'eventCount' }],
+    dimensionFilter: {
+      andGroup: {
+        expressions: [
+          {
+            filter: {
+              fieldName: 'eventName',
+              stringFilter: { matchType: 'EXACT', value: 'offerte_form_succes' },
+            },
+          },
+          {
+            filter: {
+              fieldName: 'sessionDefaultChannelGroup',
+              stringFilter: { matchType: 'BEGINS_WITH', value: 'Paid' },
+            },
+          },
+        ],
+      },
+    },
+    orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }],
+  });
+
+  return (response.rows || []).map((row) => ({
+    campaign: row.dimensionValues[0].value,
+    count: parseInt(row.metricValues[0].value, 10),
+  }));
+}
+
 async function fetchDailySessions(dateRange, days) {
   const [response] = await analyticsDataClient.runReport({
     property: `properties/${PROPERTY_ID}`,
@@ -222,6 +255,7 @@ app.get('/api/analytics', basicAuth, async (req, res) => {
       offerteByPage,
       offerteByChannel,
       previousOfferteByChannel,
+      offerteByCampaign,
       dailySessions,
       dailySessionsPrev,
     ] = await Promise.all([
@@ -232,6 +266,7 @@ app.get('/api/analytics', basicAuth, async (req, res) => {
       fetchOfferteByPage(ranges.current),
       fetchOfferteByChannel(ranges.current),
       fetchOfferteByChannel(ranges.previous),
+      fetchOfferteByCampaign(ranges.current),
       fetchDailySessions(ranges.current, rangeDays),
       fetchDailySessions(ranges.previous, rangeDays),
     ]);
@@ -317,6 +352,7 @@ app.get('/api/analytics', basicAuth, async (req, res) => {
       },
       channels,
       offerteByPage,
+      offerteByCampaign,
       dailySessions,
       dailySessionsPrev,
     });
