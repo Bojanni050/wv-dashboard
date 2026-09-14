@@ -75,9 +75,9 @@ body.is-locked .dashboard {
   text-align: center;
 }
 
-.login-modal .diamond {
+.login-modal .brand-logo {
+  width: 36px;
   margin-bottom: 16px;
-  animation: shimmer 4s ease-in-out infinite;
 }
 
 .login-title {
@@ -172,8 +172,10 @@ body.is-locked .dashboard {
   gap: 14px;
 }
 
-.diamond {
+.brand-logo {
   flex-shrink: 0;
+  width: 28px;
+  height: auto;
   animation: shimmer 4s ease-in-out infinite;
 }
 
