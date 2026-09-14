@@ -10,8 +10,9 @@ const PORT = process.env.PORT || 3001;
 
 const PROPERTY_ID = process.env.GA4_PROPERTY_ID || '368911252';
 
-const VALID_RANGES = ['7', '28', '90', 'month'];
+const VALID_RANGES = ['7', '28', '90', 'month', 'lastweek', 'custom'];
 const VALID_COMPARE = ['previous', 'year'];
+const MAX_CUSTOM_RANGE_DAYS = 366;
 
 const analyticsDataClient = new BetaAnalyticsDataClient();
 
@@ -57,13 +58,55 @@ function formatDate(date) {
   return `${y}-${m}-${d}`;
 }
 
-// rangeParam is '7' | '28' | '90' | 'month'
-function resolveCurrentRange(rangeParam) {
+function isValidDateStr(s) {
+  return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(new Date(s).getTime());
+}
+
+// Resolves the requested range into a concrete { rangeParam, customStart,
+// customEnd } triple, falling back to '7' whenever 'custom' is requested
+// without a valid, sane start/end pair.
+function resolveRangeParam(query) {
+  if (query.range === 'custom') {
+    const { start, end } = query;
+    if (
+      isValidDateStr(start) &&
+      isValidDateStr(end) &&
+      start <= end &&
+      end <= formatDate(new Date()) &&
+      daysInRange({ start, end }) <= MAX_CUSTOM_RANGE_DAYS
+    ) {
+      return { rangeParam: 'custom', customStart: start, customEnd: end };
+    }
+    return { rangeParam: '7' };
+  }
+
+  if (VALID_RANGES.includes(query.range)) return { rangeParam: query.range };
+  return { rangeParam: '7' };
+}
+
+// rangeParam is '7' | '28' | '90' | 'month' | 'lastweek' | 'custom'
+function resolveCurrentRange(rangeParam, customStart, customEnd) {
   const end = new Date();
+
+  if (rangeParam === 'custom') {
+    return { start: customStart, end: customEnd };
+  }
 
   if (rangeParam === 'month') {
     const start = new Date(end.getFullYear(), end.getMonth(), 1);
     return { start: formatDate(start), end: formatDate(end) };
+  }
+
+  if (rangeParam === 'lastweek') {
+    const dayOfWeek = end.getDay(); // 0 = Sunday .. 6 = Saturday
+    const diffToMonday = (dayOfWeek + 6) % 7;
+    const thisMonday = new Date(end);
+    thisMonday.setDate(end.getDate() - diffToMonday);
+    const lastMonday = new Date(thisMonday);
+    lastMonday.setDate(thisMonday.getDate() - 7);
+    const lastSunday = new Date(lastMonday);
+    lastSunday.setDate(lastMonday.getDate() + 6);
+    return { start: formatDate(lastMonday), end: formatDate(lastSunday) };
   }
 
   const start = new Date();
@@ -93,8 +136,8 @@ function resolveComparisonRange(current, compareParam) {
   return { start: formatDate(prevStart), end: formatDate(prevEnd) };
 }
 
-function getRanges(rangeParam, compareParam) {
-  const current = resolveCurrentRange(rangeParam);
+function getRanges(rangeParam, compareParam, customStart, customEnd) {
+  const current = resolveCurrentRange(rangeParam, customStart, customEnd);
   const previous = resolveComparisonRange(current, compareParam);
   return { current, previous };
 }
@@ -279,11 +322,11 @@ async function fetchDailySessions(dateRange, days) {
 // --- Main endpoint ---
 
 app.get('/api/analytics', basicAuth, async (req, res) => {
-  const rangeParam = VALID_RANGES.includes(req.query.range) ? req.query.range : '7';
+  const { rangeParam, customStart, customEnd } = resolveRangeParam(req.query);
   const compareParam = VALID_COMPARE.includes(req.query.compare) ? req.query.compare : 'previous';
 
   try {
-    const ranges = getRanges(rangeParam, compareParam);
+    const ranges = getRanges(rangeParam, compareParam, customStart, customEnd);
 
     const [
       currentMetrics,
@@ -332,6 +375,8 @@ app.get('/api/analytics', basicAuth, async (req, res) => {
     res.json({
       range: rangeParam,
       compare: compareParam,
+      periodStart: ranges.current.start,
+      periodEnd: ranges.current.end,
       kpis: {
         sessions: {
           current: currentMetrics.sessions,

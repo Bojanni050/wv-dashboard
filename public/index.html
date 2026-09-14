@@ -30,8 +30,10 @@
         <div class="period-selector">
           <button class="period-btn active" data-range="7">7 dagen</button>
           <button class="period-btn" data-range="28">28 dagen</button>
+          <button class="period-btn" data-range="lastweek">Vorige week</button>
           <button class="period-btn" data-range="month">Deze maand</button>
           <button class="period-btn" data-range="90">90 dagen</button>
+          <button class="period-btn" data-range="custom" id="customRangeBtn">Aangepast</button>
         </div>
         <div class="period-selector">
           <button class="period-btn active" data-compare="previous">Vs. vorige periode</button>
@@ -44,6 +46,14 @@
         </div>
       </div>
     </header>
+
+    <!-- Custom date range picker -->
+    <div class="custom-range-picker" id="customRangePicker" hidden>
+      <label>Van <input type="date" id="customStart" /></label>
+      <label>Tot <input type="date" id="customEnd" /></label>
+      <button id="customApplyBtn">Toepassen</button>
+      <span class="custom-range-error" id="customRangeError" hidden>Kies een geldige periode (van vóór of gelijk aan tot, niet in de toekomst).</span>
+    </div>
 
     <!-- KPI Tiles -->
     <section class="kpi-grid" id="kpiGrid">

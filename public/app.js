@@ -3,11 +3,12 @@
 
   let currentRange = '7';
   let currentCompare = 'previous';
+  let currentCustomRange = null;
   let lineChart = null;
   let donutChart = null;
   let refreshTimer = null;
 
-  var RANGE_LABELS = { '7': '7 dagen', '28': '28 dagen', '90': '90 dagen', month: 'deze maand' };
+  var RANGE_LABELS = { '7': '7 dagen', '28': '28 dagen', '90': '90 dagen', month: 'deze maand', lastweek: 'vorige week' };
   var COMPARE_LABELS = { previous: 'vorige periode', year: 'zelfde periode vorig jaar' };
 
   function capitalize(s) {
@@ -42,8 +43,12 @@
   }
 
   // --- Fetch data ---
-  async function fetchAnalytics(range, compare) {
-    const res = await fetch('/api/analytics?range=' + range + '&compare=' + compare, {
+  async function fetchAnalytics(range, compare, customRange) {
+    var url = '/api/analytics?range=' + range + '&compare=' + compare;
+    if (range === 'custom' && customRange) {
+      url += '&start=' + customRange.start + '&end=' + customRange.end;
+    }
+    const res = await fetch(url, {
       headers: { Accept: 'application/json' },
     });
     if (!res.ok) {
@@ -285,14 +290,19 @@
   }
 
   // --- Main load ---
-  async function load(range, compare) {
+  async function load(range, compare, customRange) {
     currentRange = range;
     currentCompare = compare;
-    document.getElementById('footerRange').textContent = RANGE_LABELS[range];
+    currentCustomRange = range === 'custom' ? customRange : null;
+
+    document.getElementById('footerRange').textContent =
+      range === 'custom' && customRange
+        ? shortDate(customRange.start) + ' – ' + shortDate(customRange.end)
+        : RANGE_LABELS[range];
     document.getElementById('lineChartSubtitle').textContent = 'Deze periode vs. ' + COMPARE_LABELS[compare];
 
     try {
-      var data = await fetchAnalytics(range, compare);
+      var data = await fetchAnalytics(range, compare, customRange);
       updateKPIs(data);
       renderLineChart(data);
       renderDonutChart(data);
@@ -373,17 +383,67 @@
   function scheduleAutoRefresh() {
     if (refreshTimer) clearInterval(refreshTimer);
     refreshTimer = setInterval(function () {
-      load(currentRange, currentCompare);
+      load(currentRange, currentCompare, currentCustomRange);
     }, 30 * 60 * 1000);
+  }
+
+  // --- Custom date range picker ---
+  var customPicker = document.getElementById('customRangePicker');
+  var customStartInput = document.getElementById('customStart');
+  var customEndInput = document.getElementById('customEnd');
+  var customError = document.getElementById('customRangeError');
+
+  function todayStr() {
+    return formatDateInput(new Date());
+  }
+
+  function formatDateInput(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function showCustomPicker() {
+    if (!customStartInput.value || !customEndInput.value) {
+      var end = new Date();
+      var start = new Date();
+      start.setDate(end.getDate() - 6);
+      customStartInput.value = formatDateInput(start);
+      customEndInput.value = formatDateInput(end);
+    }
+    customPicker.hidden = false;
+  }
+
+  function hideCustomPicker() {
+    customPicker.hidden = true;
+    customError.hidden = true;
   }
 
   // --- Period selector ---
   document.querySelectorAll('.period-btn[data-range]').forEach(function (btn) {
     btn.addEventListener('click', function () {
+      if (btn.dataset.range === 'custom') {
+        showCustomPicker();
+        return;
+      }
+      hideCustomPicker();
       document.querySelectorAll('.period-btn[data-range]').forEach(function (b) { b.classList.remove('active'); });
       btn.classList.add('active');
-      load(btn.dataset.range, currentCompare);
+      load(btn.dataset.range, currentCompare, null);
     });
+  });
+
+  document.getElementById('customApplyBtn').addEventListener('click', function () {
+    var start = customStartInput.value;
+    var end = customEndInput.value;
+
+    if (!start || !end || start > end || end > todayStr()) {
+      customError.hidden = false;
+      return;
+    }
+    customError.hidden = true;
+
+    document.querySelectorAll('.period-btn[data-range]').forEach(function (b) { b.classList.remove('active'); });
+    document.getElementById('customRangeBtn').classList.add('active');
+    load('custom', currentCompare, { start: start, end: end });
   });
 
   // --- Compare selector ---
@@ -391,11 +451,11 @@
     btn.addEventListener('click', function () {
       document.querySelectorAll('.period-btn[data-compare]').forEach(function (b) { b.classList.remove('active'); });
       btn.classList.add('active');
-      load(currentRange, btn.dataset.compare);
+      load(currentRange, btn.dataset.compare, currentCustomRange);
     });
   });
 
   // --- Init ---
-  load(currentRange, currentCompare);
+  load(currentRange, currentCompare, currentCustomRange);
   scheduleAutoRefresh();
 })();
