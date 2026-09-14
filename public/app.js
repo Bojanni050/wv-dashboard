@@ -455,7 +455,111 @@
     });
   });
 
+  // --- Tabs ---
+  var reportsLoaded = false;
+
+  document.querySelectorAll('.tab-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+
+      var tab = btn.dataset.tab;
+      document.getElementById('dashboardView').hidden = tab !== 'dashboard';
+      document.getElementById('reportsView').hidden = tab !== 'reports';
+
+      if (tab === 'reports' && !reportsLoaded) {
+        reportsLoaded = true;
+        loadReports();
+      }
+    });
+  });
+
+  // --- Reports ---
+  var isAdmin = false;
+
+  function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  function formatReportDate(iso) {
+    return new Date(iso).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  async function fetchRole() {
+    try {
+      var res = await fetch('/api/me', { headers: { Accept: 'application/json' } });
+      if (!res.ok) return;
+      var data = await res.json();
+      isAdmin = data.role === 'admin';
+      document.getElementById('reportsUploadSection').hidden = !isAdmin;
+    } catch (err) {
+      console.error('Role fetch error:', err);
+    }
+  }
+
+  async function loadReports() {
+    var body = document.getElementById('reportsTableBody');
+    try {
+      var res = await fetch('/api/reports', { headers: { Accept: 'application/json' } });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      var reports = await res.json();
+
+      if (!reports.length) {
+        body.innerHTML = '<tr><td colspan="4" class="empty-row">Nog geen rapporten geüpload</td></tr>';
+        return;
+      }
+
+      body.innerHTML = reports
+        .map(function (r) {
+          return '<tr><td>' + escapeHtml(r.originalName) + '</td><td>' + formatReportDate(r.uploadedAt) +
+            '</td><td class="th-right">' + formatFileSize(r.size) +
+            '</td><td class="th-right"><a class="reports-download-link" href="/api/reports/' + encodeURIComponent(r.id) + '">Download</a></td></tr>';
+        })
+        .join('');
+    } catch (err) {
+      console.error('Reports load error:', err);
+      body.innerHTML = '<tr><td colspan="4" class="empty-row">Fout bij laden van rapporten</td></tr>';
+    }
+  }
+
+  function setUploadStatus(message, isError) {
+    var el = document.getElementById('reportUploadStatus');
+    el.textContent = message;
+    el.hidden = !message;
+    el.classList.toggle('error', Boolean(isError));
+    el.classList.toggle('success', !isError);
+  }
+
+  document.getElementById('reportUploadBtn').addEventListener('click', async function () {
+    var input = document.getElementById('reportFileInput');
+    var file = input.files[0];
+    if (!file) {
+      setUploadStatus('Kies eerst een PDF-bestand.', true);
+      return;
+    }
+
+    var formData = new FormData();
+    formData.append('report', file);
+
+    setUploadStatus('Uploaden…', false);
+    try {
+      var res = await fetch('/api/reports', { method: 'POST', body: formData });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload mislukt');
+
+      setUploadStatus('"' + data.originalName + '" geüpload.', false);
+      input.value = '';
+      reportsLoaded = true;
+      loadReports();
+    } catch (err) {
+      setUploadStatus(err.message, true);
+    }
+  });
+
   // --- Init ---
+  fetchRole();
   load(currentRange, currentCompare, currentCustomRange);
   scheduleAutoRefresh();
 })();

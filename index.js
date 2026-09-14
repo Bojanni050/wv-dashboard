@@ -2,7 +2,9 @@ require('dotenv').config();
 
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const crypto = require('crypto');
+const multer = require('multer');
 const { BetaAnalyticsDataClient } = require('@google-analytics/data');
 
 const app = express();
@@ -17,11 +19,16 @@ const MAX_CUSTOM_RANGE_DAYS = 366;
 const analyticsDataClient = new BetaAnalyticsDataClient();
 
 // --- Basic HTTP Auth middleware ---
+// Two credential pairs: DASH_USER/DASH_PASS (viewer) and
+// ADMIN_USER/ADMIN_PASS (admin). Sets req.role so routes can gate
+// admin-only actions like uploading reports.
 function basicAuth(req, res, next) {
-  const user = process.env.DASH_USER;
-  const pass = process.env.DASH_PASS;
+  const viewerUser = process.env.DASH_USER;
+  const viewerPass = process.env.DASH_PASS;
+  const adminUser = process.env.ADMIN_USER;
+  const adminPass = process.env.ADMIN_PASS;
 
-  if (!user || !pass) {
+  if (!viewerUser || !viewerPass) {
     return res.status(500).json({ error: 'Auth not configured' });
   }
 
@@ -37,15 +44,26 @@ function basicAuth(req, res, next) {
   const [providedUser, providedPass] = decoded.split(':');
 
   const hash = (value) => crypto.createHash('sha256').update(value || '').digest();
+  const matches = (user, pass) =>
+    crypto.timingSafeEqual(hash(providedUser), hash(user)) &&
+    crypto.timingSafeEqual(hash(providedPass), hash(pass));
 
-  const userOk = crypto.timingSafeEqual(hash(providedUser), hash(user));
-  const passOk = crypto.timingSafeEqual(hash(providedPass), hash(pass));
+  const isAdmin = Boolean(adminUser && adminPass && matches(adminUser, adminPass));
+  const isViewer = !isAdmin && matches(viewerUser, viewerPass);
 
-  if (!userOk || !passOk) {
+  if (!isAdmin && !isViewer) {
     res.setHeader('WWW-Authenticate', 'Basic realm="White Vision Dashboard"');
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
+  req.role = isAdmin ? 'admin' : 'viewer';
+  next();
+}
+
+function requireAdmin(req, res, next) {
+  if (req.role !== 'admin') {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
   next();
 }
 
@@ -447,6 +465,84 @@ app.get('/api/analytics', basicAuth, async (req, res) => {
       detail: err.message,
     });
   }
+});
+
+// --- Reports (admin uploads, everyone with dashboard access can view/download) ---
+
+const REPORTS_DIR = path.join(__dirname, 'reports');
+const REPORTS_INDEX_FILE = path.join(REPORTS_DIR, '_index.json');
+
+function ensureReportsDir() {
+  if (!fs.existsSync(REPORTS_DIR)) fs.mkdirSync(REPORTS_DIR, { recursive: true });
+}
+
+function readReportsIndex() {
+  ensureReportsDir();
+  if (!fs.existsSync(REPORTS_INDEX_FILE)) return [];
+  try {
+    return JSON.parse(fs.readFileSync(REPORTS_INDEX_FILE, 'utf8'));
+  } catch (err) {
+    console.error('Reports index read error:', err.message);
+    return [];
+  }
+}
+
+function writeReportsIndex(list) {
+  ensureReportsDir();
+  fs.writeFileSync(REPORTS_INDEX_FILE, JSON.stringify(list, null, 2));
+}
+
+const reportsUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype !== 'application/pdf') {
+      return cb(new Error('Alleen PDF-bestanden zijn toegestaan'));
+    }
+    cb(null, true);
+  },
+});
+
+app.get('/api/me', basicAuth, (req, res) => {
+  res.json({ role: req.role });
+});
+
+app.get('/api/reports', basicAuth, (req, res) => {
+  res.json(readReportsIndex());
+});
+
+app.post('/api/reports', basicAuth, requireAdmin, (req, res) => {
+  reportsUpload.single('report')(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    if (!req.file) return res.status(400).json({ error: 'Geen bestand ontvangen' });
+
+    const id = crypto.randomUUID();
+    ensureReportsDir();
+    fs.writeFileSync(path.join(REPORTS_DIR, id + '.pdf'), req.file.buffer);
+
+    const entry = {
+      id,
+      originalName: req.file.originalname,
+      size: req.file.size,
+      uploadedAt: new Date().toISOString(),
+    };
+
+    const list = readReportsIndex();
+    list.unshift(entry);
+    writeReportsIndex(list);
+
+    res.status(201).json(entry);
+  });
+});
+
+app.get('/api/reports/:id', basicAuth, (req, res) => {
+  const entry = readReportsIndex().find((r) => r.id === req.params.id);
+  if (!entry) return res.status(404).json({ error: 'Rapport niet gevonden' });
+
+  const filePath = path.join(REPORTS_DIR, entry.id + '.pdf');
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Bestand niet gevonden' });
+
+  res.download(filePath, entry.originalName);
 });
 
 // --- Serve static frontend ---

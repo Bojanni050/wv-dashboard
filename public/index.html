@@ -47,6 +47,15 @@
       </div>
     </header>
 
+    <!-- Tabs -->
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+      <button class="tab-btn" data-tab="reports">Rapporten</button>
+    </nav>
+
+    <!-- Dashboard tab -->
+    <div id="dashboardView">
+
     <!-- Custom date range picker -->
     <div class="custom-range-picker" id="customRangePicker" hidden>
       <label>Van <input type="date" id="customStart" /></label>
@@ -177,6 +186,43 @@
         </table>
       </div>
     </section>
+
+    </div>
+    <!-- /Dashboard tab -->
+
+    <!-- Reports tab -->
+    <div id="reportsView" hidden>
+      <section class="table-card" id="reportsUploadSection" hidden>
+        <h2 class="card-title">Rapport uploaden</h2>
+        <p class="card-subtitle">Alleen zichtbaar voor Admin</p>
+        <div class="reports-upload">
+          <input type="file" id="reportFileInput" accept="application/pdf" />
+          <button id="reportUploadBtn">Uploaden</button>
+        </div>
+        <p class="reports-upload-status" id="reportUploadStatus" hidden></p>
+      </section>
+
+      <section class="table-card">
+        <h2 class="card-title">Rapporten</h2>
+        <p class="card-subtitle">PDF-rapporten over de gang van zaken</p>
+        <div class="table-wrap">
+          <table id="reportsTable">
+            <thead>
+              <tr>
+                <th>Naam</th>
+                <th>Datum</th>
+                <th class="th-right">Grootte</th>
+                <th class="th-right"></th>
+              </tr>
+            </thead>
+            <tbody id="reportsTableBody">
+              <tr><td colspan="4" class="loading-row">Laden…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+    <!-- /Reports tab -->
 
     <!-- Footer -->
     <footer class="footer">
