@@ -73,23 +73,27 @@ function pctChange(current, previous) {
   return Math.round(((current - previous) / previous) * 100);
 }
 
-// Buckets GA4's sessionDefaultChannelGroup values into the three groups
-// the dashboard cares about. "Paid Social" counts as Paid Ads, not Social,
-// so the buckets don't double-count sessions.
-function groupChannelSessions(channels) {
-  let paidAds = 0;
-  let social = 0;
-  let search = 0;
-  let overig = 0;
+// Buckets a GA4 sessionDefaultChannelGroup value into the group the
+// dashboard cares about. "Paid Social" counts as Paid Ads, not Social,
+// so the buckets don't double-count.
+function channelBucket(channel) {
+  if (channel.startsWith('Paid')) return 'paidAds';
+  if (channel === 'Organic Social') return 'social';
+  if (channel === 'Organic Search') return 'search';
+  return 'overig';
+}
 
-  channels.forEach((c) => {
-    if (c.channel.startsWith('Paid')) paidAds += c.sessions;
-    else if (c.channel === 'Organic Social') social += c.sessions;
-    else if (c.channel === 'Organic Search') search += c.sessions;
-    else overig += c.sessions;
+function groupByChannel(rows, valueKey) {
+  const totals = { paidAds: 0, social: 0, search: 0, overig: 0 };
+  rows.forEach((r) => {
+    totals[channelBucket(r.channel)] += r[valueKey];
   });
+  return totals;
+}
 
-  return { paidAds, social, search, overig };
+function conversionRate(conversions, base) {
+  if (base === 0) return 0;
+  return Math.round((conversions / base) * 1000) / 10;
 }
 
 // --- GA4 API calls ---
@@ -151,6 +155,26 @@ async function fetchOfferteByPage(dateRange) {
   }));
 }
 
+async function fetchOfferteByChannel(dateRange) {
+  const [response] = await analyticsDataClient.runReport({
+    property: `properties/${PROPERTY_ID}`,
+    dateRanges: [{ startDate: dateRange.start, endDate: dateRange.end }],
+    dimensions: [{ name: 'sessionDefaultChannelGroup' }],
+    metrics: [{ name: 'eventCount' }],
+    dimensionFilter: {
+      filter: {
+        fieldName: 'eventName',
+        stringFilter: { matchType: 'EXACT', value: 'offerte_form_succes' },
+      },
+    },
+  });
+
+  return (response.rows || []).map((row) => ({
+    channel: row.dimensionValues[0].value,
+    count: parseInt(row.metricValues[0].value, 10),
+  }));
+}
+
 async function fetchDailySessions(dateRange, days) {
   const [response] = await analyticsDataClient.runReport({
     property: `properties/${PROPERTY_ID}`,
@@ -196,6 +220,8 @@ app.get('/api/analytics', basicAuth, async (req, res) => {
       channels,
       previousChannels,
       offerteByPage,
+      offerteByChannel,
+      previousOfferteByChannel,
       dailySessions,
       dailySessionsPrev,
     ] = await Promise.all([
@@ -204,6 +230,8 @@ app.get('/api/analytics', basicAuth, async (req, res) => {
       fetchChannels(ranges.current),
       fetchChannels(ranges.previous),
       fetchOfferteByPage(ranges.current),
+      fetchOfferteByChannel(ranges.current),
+      fetchOfferteByChannel(ranges.previous),
       fetchDailySessions(ranges.current, rangeDays),
       fetchDailySessions(ranges.previous, rangeDays),
     ]);
@@ -214,8 +242,19 @@ app.get('/api/analytics', basicAuth, async (req, res) => {
     const prevOfferte = await fetchOfferteByPage(ranges.previous);
     const prevOfferteCount = prevOfferte.reduce((sum, r) => sum + r.count, 0);
 
-    const channelGroups = groupChannelSessions(channels);
-    const prevChannelGroups = groupChannelSessions(previousChannels);
+    const channelGroups = groupByChannel(channels, 'sessions');
+    const prevChannelGroups = groupByChannel(previousChannels, 'sessions');
+    const offerteChannelGroups = groupByChannel(offerteByChannel, 'count');
+    const prevOfferteChannelGroups = groupByChannel(previousOfferteByChannel, 'count');
+
+    const conversionTotal = conversionRate(offerteCount, currentMetrics.users);
+    const prevConversionTotal = conversionRate(prevOfferteCount, previousMetrics.users);
+
+    const conversionPaid = conversionRate(offerteChannelGroups.paidAds, channelGroups.paidAds);
+    const prevConversionPaid = conversionRate(prevOfferteChannelGroups.paidAds, prevChannelGroups.paidAds);
+
+    const conversionSocial = conversionRate(offerteChannelGroups.social, channelGroups.social);
+    const prevConversionSocial = conversionRate(prevOfferteChannelGroups.social, prevChannelGroups.social);
 
     res.json({
       range: rangeDays,
@@ -259,6 +298,21 @@ app.get('/api/analytics', basicAuth, async (req, res) => {
           current: channelGroups.overig,
           previous: prevChannelGroups.overig,
           change: pctChange(channelGroups.overig, prevChannelGroups.overig),
+        },
+        conversionTotal: {
+          current: conversionTotal,
+          previous: prevConversionTotal,
+          change: pctChange(conversionTotal, prevConversionTotal),
+        },
+        conversionPaid: {
+          current: conversionPaid,
+          previous: prevConversionPaid,
+          change: pctChange(conversionPaid, prevConversionPaid),
+        },
+        conversionSocial: {
+          current: conversionSocial,
+          previous: prevConversionSocial,
+          change: pctChange(conversionSocial, prevConversionSocial),
         },
       },
       channels,

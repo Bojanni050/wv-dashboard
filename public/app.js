@@ -16,6 +16,10 @@
     return sign + n + '%';
   }
 
+  function formatConversion(n) {
+    return n.toLocaleString('nl-NL', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+  }
+
   function formatChangeEl(el, change) {
     el.textContent = formatPct(change) + ' vs vorige periode';
     el.classList.remove('up', 'down', 'neutral');
@@ -67,6 +71,15 @@
 
     document.getElementById('kpi-overig').textContent = formatNumber(k.overig.current);
     formatChangeEl(document.getElementById('kpi-overig-change'), k.overig.change);
+
+    document.getElementById('kpi-conv-total').textContent = formatConversion(k.conversionTotal.current);
+    formatChangeEl(document.getElementById('kpi-conv-total-change'), k.conversionTotal.change);
+
+    document.getElementById('kpi-conv-paid').textContent = formatConversion(k.conversionPaid.current);
+    formatChangeEl(document.getElementById('kpi-conv-paid-change'), k.conversionPaid.change);
+
+    document.getElementById('kpi-conv-social').textContent = formatConversion(k.conversionSocial.current);
+    formatChangeEl(document.getElementById('kpi-conv-social-change'), k.conversionSocial.change);
   }
 
   // --- Line chart ---
