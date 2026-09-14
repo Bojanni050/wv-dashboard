@@ -2,7 +2,7 @@ services:
   dashboard:
     build: .
     ports:
-      - "3014:3014"
+      - "${BIND_HOST:-0.0.0.0}:3014:3014"
     env_file:
       - .env
     volumes:
