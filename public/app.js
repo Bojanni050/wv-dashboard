@@ -1,10 +1,18 @@
 (function () {
   'use strict';
 
-  let currentRange = 7;
+  let currentRange = '7';
+  let currentCompare = 'previous';
   let lineChart = null;
   let donutChart = null;
   let refreshTimer = null;
+
+  var RANGE_LABELS = { '7': '7 dagen', '28': '28 dagen', '90': '90 dagen', month: 'deze maand' };
+  var COMPARE_LABELS = { previous: 'vorige periode', year: 'zelfde periode vorig jaar' };
+
+  function capitalize(s) {
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
 
   // --- Formatting helpers ---
   function formatNumber(n) {
@@ -21,7 +29,7 @@
   }
 
   function formatChangeEl(el, change) {
-    el.textContent = formatPct(change) + ' vs vorige periode';
+    el.textContent = formatPct(change) + ' vs ' + COMPARE_LABELS[currentCompare];
     el.classList.remove('up', 'down', 'neutral');
     if (change > 0) el.classList.add('up');
     else if (change < 0) el.classList.add('down');
@@ -34,8 +42,8 @@
   }
 
   // --- Fetch data ---
-  async function fetchAnalytics(range) {
-    const res = await fetch('/api/analytics?range=' + range, {
+  async function fetchAnalytics(range, compare) {
+    const res = await fetch('/api/analytics?range=' + range + '&compare=' + compare, {
       headers: { Accept: 'application/json' },
     });
     if (!res.ok) {
@@ -111,7 +119,7 @@
             pointHoverRadius: 5,
           },
           {
-            label: 'Vorige periode',
+            label: capitalize(COMPARE_LABELS[currentCompare]),
             data: prevData,
             borderColor: '#555',
             backgroundColor: 'transparent',
@@ -277,12 +285,14 @@
   }
 
   // --- Main load ---
-  async function load(range) {
+  async function load(range, compare) {
     currentRange = range;
-    document.getElementById('footerRange').textContent = range + ' dagen';
+    currentCompare = compare;
+    document.getElementById('footerRange').textContent = RANGE_LABELS[range];
+    document.getElementById('lineChartSubtitle').textContent = 'Deze periode vs. ' + COMPARE_LABELS[compare];
 
     try {
-      var data = await fetchAnalytics(range);
+      var data = await fetchAnalytics(range, compare);
       updateKPIs(data);
       renderLineChart(data);
       renderDonutChart(data);
@@ -363,21 +373,29 @@
   function scheduleAutoRefresh() {
     if (refreshTimer) clearInterval(refreshTimer);
     refreshTimer = setInterval(function () {
-      load(currentRange);
+      load(currentRange, currentCompare);
     }, 30 * 60 * 1000);
   }
 
   // --- Period selector ---
-  document.querySelectorAll('.period-btn').forEach(function (btn) {
+  document.querySelectorAll('.period-btn[data-range]').forEach(function (btn) {
     btn.addEventListener('click', function () {
-      document.querySelectorAll('.period-btn').forEach(function (b) { b.classList.remove('active'); });
+      document.querySelectorAll('.period-btn[data-range]').forEach(function (b) { b.classList.remove('active'); });
       btn.classList.add('active');
-      var range = parseInt(btn.dataset.range, 10);
-      load(range);
+      load(btn.dataset.range, currentCompare);
+    });
+  });
+
+  // --- Compare selector ---
+  document.querySelectorAll('.period-btn[data-compare]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.period-btn[data-compare]').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      load(currentRange, btn.dataset.compare);
     });
   });
 
   // --- Init ---
-  load(7);
+  load(currentRange, currentCompare);
   scheduleAutoRefresh();
 })();

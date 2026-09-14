@@ -30,7 +30,12 @@
         <div class="period-selector">
           <button class="period-btn active" data-range="7">7 dagen</button>
           <button class="period-btn" data-range="28">28 dagen</button>
+          <button class="period-btn" data-range="month">Deze maand</button>
           <button class="period-btn" data-range="90">90 dagen</button>
+        </div>
+        <div class="period-selector">
+          <button class="period-btn active" data-compare="previous">Vs. vorige periode</button>
+          <button class="period-btn" data-compare="year">Vs. vorig jaar</button>
         </div>
         <div class="refresh-info">
           <span class="refresh-dot"></span>
@@ -111,7 +116,7 @@
     <section class="charts-grid">
       <div class="chart-card chart-line">
         <h2 class="card-title widget-title" data-info="dailySessions" tabindex="0" role="button">Dagelijkse sessies</h2>
-        <p class="card-subtitle">Deze periode vs. vorige periode</p>
+        <p class="card-subtitle" id="lineChartSubtitle">Deze periode vs. vorige periode</p>
         <div class="chart-wrap">
           <canvas id="lineChart"></canvas>
         </div>

@@ -10,6 +10,9 @@ const PORT = process.env.PORT || 3001;
 
 const PROPERTY_ID = process.env.GA4_PROPERTY_ID || '368911252';
 
+const VALID_RANGES = ['7', '28', '90', 'month'];
+const VALID_COMPARE = ['previous', 'year'];
+
 const analyticsDataClient = new BetaAnalyticsDataClient();
 
 // --- Basic HTTP Auth middleware ---
@@ -54,18 +57,52 @@ function formatDate(date) {
   return `${y}-${m}-${d}`;
 }
 
-function getDateRange(days) {
+// rangeParam is '7' | '28' | '90' | 'month'
+function resolveCurrentRange(rangeParam) {
   const end = new Date();
+
+  if (rangeParam === 'month') {
+    const start = new Date(end.getFullYear(), end.getMonth(), 1);
+    return { start: formatDate(start), end: formatDate(end) };
+  }
+
   const start = new Date();
-  start.setDate(end.getDate() - days);
-  const prevEnd = new Date(start);
-  prevEnd.setDate(start.getDate() - 1);
+  start.setDate(end.getDate() - parseInt(rangeParam, 10));
+  return { start: formatDate(start), end: formatDate(end) };
+}
+
+// compareParam is 'previous' (period immediately before, same length) or
+// 'year' (same calendar dates, one year earlier)
+function resolveComparisonRange(current, compareParam) {
+  const currentStart = new Date(current.start);
+  const currentEnd = new Date(current.end);
+
+  if (compareParam === 'year') {
+    const prevStart = new Date(currentStart);
+    prevStart.setFullYear(prevStart.getFullYear() - 1);
+    const prevEnd = new Date(currentEnd);
+    prevEnd.setFullYear(prevEnd.getFullYear() - 1);
+    return { start: formatDate(prevStart), end: formatDate(prevEnd) };
+  }
+
+  const lengthDays = Math.round((currentEnd - currentStart) / 86400000) + 1;
+  const prevEnd = new Date(currentStart);
+  prevEnd.setDate(prevEnd.getDate() - 1);
   const prevStart = new Date(prevEnd);
-  prevStart.setDate(prevEnd.getDate() - days);
-  return {
-    current: { start: formatDate(start), end: formatDate(end) },
-    previous: { start: formatDate(prevStart), end: formatDate(prevEnd) },
-  };
+  prevStart.setDate(prevEnd.getDate() - (lengthDays - 1));
+  return { start: formatDate(prevStart), end: formatDate(prevEnd) };
+}
+
+function getRanges(rangeParam, compareParam) {
+  const current = resolveCurrentRange(rangeParam);
+  const previous = resolveComparisonRange(current, compareParam);
+  return { current, previous };
+}
+
+function daysInRange(range) {
+  const start = new Date(range.start);
+  const end = new Date(range.end);
+  return Math.round((end - start) / 86400000) + 1;
 }
 
 function pctChange(current, previous) {
@@ -242,10 +279,11 @@ async function fetchDailySessions(dateRange, days) {
 // --- Main endpoint ---
 
 app.get('/api/analytics', basicAuth, async (req, res) => {
-  const rangeDays = Math.max(1, Math.min(365, parseInt(req.query.range, 10) || 7));
+  const rangeParam = VALID_RANGES.includes(req.query.range) ? req.query.range : '7';
+  const compareParam = VALID_COMPARE.includes(req.query.compare) ? req.query.compare : 'previous';
 
   try {
-    const ranges = getDateRange(rangeDays);
+    const ranges = getRanges(rangeParam, compareParam);
 
     const [
       currentMetrics,
@@ -267,8 +305,8 @@ app.get('/api/analytics', basicAuth, async (req, res) => {
       fetchOfferteByChannel(ranges.current),
       fetchOfferteByChannel(ranges.previous),
       fetchOfferteByCampaign(ranges.current),
-      fetchDailySessions(ranges.current, rangeDays),
-      fetchDailySessions(ranges.previous, rangeDays),
+      fetchDailySessions(ranges.current, daysInRange(ranges.current)),
+      fetchDailySessions(ranges.previous, daysInRange(ranges.previous)),
     ]);
 
     const offerteCount = offerteByPage.reduce((sum, r) => sum + r.count, 0);
@@ -292,7 +330,8 @@ app.get('/api/analytics', basicAuth, async (req, res) => {
     const prevConversionSocial = conversionRate(prevOfferteChannelGroups.social, prevChannelGroups.social);
 
     res.json({
-      range: rangeDays,
+      range: rangeParam,
+      compare: compareParam,
       kpis: {
         sessions: {
           current: currentMetrics.sessions,
