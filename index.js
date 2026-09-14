@@ -306,6 +306,11 @@ async function fetchOfferteByCampaign(dateRange) {
   }));
 }
 
+// GA4's 'date' dimension comes back as YYYYMMDD (no separators)
+function ga4DateToIso(ga4Date) {
+  return `${ga4Date.slice(0, 4)}-${ga4Date.slice(4, 6)}-${ga4Date.slice(6, 8)}`;
+}
+
 async function fetchDailySessions(dateRange, days) {
   const [response] = await analyticsDataClient.runReport({
     property: `properties/${PROPERTY_ID}`,
@@ -316,7 +321,7 @@ async function fetchDailySessions(dateRange, days) {
   });
 
   const rows = (response.rows || []).map((row) => ({
-    date: row.dimensionValues[0].value,
+    date: ga4DateToIso(row.dimensionValues[0].value),
     sessions: parseInt(row.metricValues[0].value, 10),
   }));
 
