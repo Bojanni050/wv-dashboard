@@ -80,14 +80,16 @@ function groupChannelSessions(channels) {
   let paidAds = 0;
   let social = 0;
   let search = 0;
+  let overig = 0;
 
   channels.forEach((c) => {
     if (c.channel.startsWith('Paid')) paidAds += c.sessions;
     else if (c.channel === 'Organic Social') social += c.sessions;
     else if (c.channel === 'Organic Search') search += c.sessions;
+    else overig += c.sessions;
   });
 
-  return { paidAds, social, search };
+  return { paidAds, social, search, overig };
 }
 
 // --- GA4 API calls ---
@@ -252,6 +254,11 @@ app.get('/api/analytics', basicAuth, async (req, res) => {
           current: channelGroups.search,
           previous: prevChannelGroups.search,
           change: pctChange(channelGroups.search, prevChannelGroups.search),
+        },
+        overig: {
+          current: channelGroups.overig,
+          previous: prevChannelGroups.overig,
+          change: pctChange(channelGroups.overig, prevChannelGroups.overig),
         },
       },
       channels,

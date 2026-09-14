@@ -156,10 +156,6 @@ body {
   margin-bottom: 32px;
 }
 
-.kpi-grid-3 {
-  grid-template-columns: repeat(3, 1fr);
-}
-
 .kpi-tile {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -340,10 +336,6 @@ tbody tr:hover td {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .kpi-grid-3 {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
   .charts-grid {
     grid-template-columns: 1fr;
   }
@@ -361,10 +353,6 @@ tbody tr:hover td {
 
 @media (max-width: 500px) {
   .kpi-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .kpi-grid-3 {
     grid-template-columns: 1fr;
   }
 

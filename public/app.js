@@ -64,6 +64,9 @@
 
     document.getElementById('kpi-search').textContent = formatNumber(k.search.current);
     formatChangeEl(document.getElementById('kpi-search-change'), k.search.change);
+
+    document.getElementById('kpi-overig').textContent = formatNumber(k.overig.current);
+    formatChangeEl(document.getElementById('kpi-overig-change'), k.overig.change);
   }
 
   // --- Line chart ---
