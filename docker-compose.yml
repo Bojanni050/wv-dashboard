@@ -2,7 +2,7 @@ services:
   dashboard:
     build: .
     ports:
-      - "3001:3001"
+      - "3014:3014"
     env_file:
       - .env
     volumes:

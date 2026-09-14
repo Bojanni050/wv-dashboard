@@ -73,6 +73,23 @@ function pctChange(current, previous) {
   return Math.round(((current - previous) / previous) * 100);
 }
 
+// Buckets GA4's sessionDefaultChannelGroup values into the three groups
+// the dashboard cares about. "Paid Social" counts as Paid Ads, not Social,
+// so the buckets don't double-count sessions.
+function groupChannelSessions(channels) {
+  let paidAds = 0;
+  let social = 0;
+  let search = 0;
+
+  channels.forEach((c) => {
+    if (c.channel.startsWith('Paid')) paidAds += c.sessions;
+    else if (c.channel === 'Organic Social') social += c.sessions;
+    else if (c.channel === 'Organic Search') search += c.sessions;
+  });
+
+  return { paidAds, social, search };
+}
+
 // --- GA4 API calls ---
 
 async function fetchMetricsForRange(dateRange) {
@@ -175,6 +192,7 @@ app.get('/api/analytics', basicAuth, async (req, res) => {
       currentMetrics,
       previousMetrics,
       channels,
+      previousChannels,
       offerteByPage,
       dailySessions,
       dailySessionsPrev,
@@ -182,6 +200,7 @@ app.get('/api/analytics', basicAuth, async (req, res) => {
       fetchMetricsForRange(ranges.current),
       fetchMetricsForRange(ranges.previous),
       fetchChannels(ranges.current),
+      fetchChannels(ranges.previous),
       fetchOfferteByPage(ranges.current),
       fetchDailySessions(ranges.current, rangeDays),
       fetchDailySessions(ranges.previous, rangeDays),
@@ -192,6 +211,9 @@ app.get('/api/analytics', basicAuth, async (req, res) => {
     // Fetch previous period offerte count
     const prevOfferte = await fetchOfferteByPage(ranges.previous);
     const prevOfferteCount = prevOfferte.reduce((sum, r) => sum + r.count, 0);
+
+    const channelGroups = groupChannelSessions(channels);
+    const prevChannelGroups = groupChannelSessions(previousChannels);
 
     res.json({
       range: rangeDays,
@@ -215,6 +237,21 @@ app.get('/api/analytics', basicAuth, async (req, res) => {
           current: offerteCount,
           previous: prevOfferteCount,
           change: pctChange(offerteCount, prevOfferteCount),
+        },
+        paidAds: {
+          current: channelGroups.paidAds,
+          previous: prevChannelGroups.paidAds,
+          change: pctChange(channelGroups.paidAds, prevChannelGroups.paidAds),
+        },
+        social: {
+          current: channelGroups.social,
+          previous: prevChannelGroups.social,
+          change: pctChange(channelGroups.social, prevChannelGroups.social),
+        },
+        search: {
+          current: channelGroups.search,
+          previous: prevChannelGroups.search,
+          change: pctChange(channelGroups.search, prevChannelGroups.search),
         },
       },
       channels,

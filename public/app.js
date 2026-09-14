@@ -55,6 +55,15 @@
 
     document.getElementById('kpi-offertes').textContent = formatNumber(k.offertes.current);
     formatChangeEl(document.getElementById('kpi-offertes-change'), k.offertes.change);
+
+    document.getElementById('kpi-paidads').textContent = formatNumber(k.paidAds.current);
+    formatChangeEl(document.getElementById('kpi-paidads-change'), k.paidAds.change);
+
+    document.getElementById('kpi-social').textContent = formatNumber(k.social.current);
+    formatChangeEl(document.getElementById('kpi-social-change'), k.social.change);
+
+    document.getElementById('kpi-search').textContent = formatNumber(k.search.current);
+    formatChangeEl(document.getElementById('kpi-search-change'), k.search.change);
   }
 
   // --- Line chart ---
