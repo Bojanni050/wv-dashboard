@@ -43,22 +43,22 @@
     <!-- KPI Tiles -->
     <section class="kpi-grid" id="kpiGrid">
       <div class="kpi-tile">
-        <p class="kpi-label">Sessies</p>
+        <p class="kpi-label widget-title" data-info="sessions" tabindex="0" role="button">Sessies</p>
         <p class="kpi-value" id="kpi-sessions">—</p>
         <p class="kpi-change" id="kpi-sessions-change"></p>
       </div>
       <div class="kpi-tile">
-        <p class="kpi-label">Gebruikers</p>
+        <p class="kpi-label widget-title" data-info="users" tabindex="0" role="button">Gebruikers</p>
         <p class="kpi-value" id="kpi-users">—</p>
         <p class="kpi-change" id="kpi-users-change"></p>
       </div>
       <div class="kpi-tile">
-        <p class="kpi-label">Paginaweergaven</p>
+        <p class="kpi-label widget-title" data-info="pageviews" tabindex="0" role="button">Paginaweergaven</p>
         <p class="kpi-value" id="kpi-pageviews">—</p>
         <p class="kpi-change" id="kpi-pageviews-change"></p>
       </div>
       <div class="kpi-tile">
-        <p class="kpi-label">Offerteaanvragen</p>
+        <p class="kpi-label widget-title" data-info="offertes" tabindex="0" role="button">Offerteaanvragen</p>
         <p class="kpi-value" id="kpi-offertes">—</p>
         <p class="kpi-change" id="kpi-offertes-change"></p>
       </div>
@@ -67,22 +67,22 @@
     <!-- Channel KPI Tiles -->
     <section class="kpi-grid" id="channelKpiGrid">
       <div class="kpi-tile">
-        <p class="kpi-label">Bezoekers via Paid Ads</p>
+        <p class="kpi-label widget-title" data-info="paidAds" tabindex="0" role="button">Bezoekers via Paid Ads</p>
         <p class="kpi-value" id="kpi-paidads">—</p>
         <p class="kpi-change" id="kpi-paidads-change"></p>
       </div>
       <div class="kpi-tile">
-        <p class="kpi-label">Bezoekers via Social</p>
+        <p class="kpi-label widget-title" data-info="social" tabindex="0" role="button">Bezoekers via Social</p>
         <p class="kpi-value" id="kpi-social">—</p>
         <p class="kpi-change" id="kpi-social-change"></p>
       </div>
       <div class="kpi-tile">
-        <p class="kpi-label">Bezoekers via Search</p>
+        <p class="kpi-label widget-title" data-info="search" tabindex="0" role="button">Bezoekers via Search</p>
         <p class="kpi-value" id="kpi-search">—</p>
         <p class="kpi-change" id="kpi-search-change"></p>
       </div>
       <div class="kpi-tile">
-        <p class="kpi-label">Bezoekers Overig</p>
+        <p class="kpi-label widget-title" data-info="overig" tabindex="0" role="button">Bezoekers Overig</p>
         <p class="kpi-value" id="kpi-overig">—</p>
         <p class="kpi-change" id="kpi-overig-change"></p>
       </div>
@@ -91,17 +91,17 @@
     <!-- Conversion KPI Tiles -->
     <section class="kpi-grid kpi-grid-3" id="conversionKpiGrid">
       <div class="kpi-tile">
-        <p class="kpi-label">Conversie totaal gebruikers</p>
+        <p class="kpi-label widget-title" data-info="conversionTotal" tabindex="0" role="button">Conversie totaal gebruikers</p>
         <p class="kpi-value" id="kpi-conv-total">—</p>
         <p class="kpi-change" id="kpi-conv-total-change"></p>
       </div>
       <div class="kpi-tile">
-        <p class="kpi-label">Conversie betaalde bezoekers</p>
+        <p class="kpi-label widget-title" data-info="conversionPaid" tabindex="0" role="button">Conversie betaalde bezoekers</p>
         <p class="kpi-value" id="kpi-conv-paid">—</p>
         <p class="kpi-change" id="kpi-conv-paid-change"></p>
       </div>
       <div class="kpi-tile">
-        <p class="kpi-label">Conversie socials</p>
+        <p class="kpi-label widget-title" data-info="conversionSocial" tabindex="0" role="button">Conversie socials</p>
         <p class="kpi-value" id="kpi-conv-social">—</p>
         <p class="kpi-change" id="kpi-conv-social-change"></p>
       </div>
@@ -110,14 +110,14 @@
     <!-- Charts -->
     <section class="charts-grid">
       <div class="chart-card chart-line">
-        <h2 class="card-title">Dagelijkse sessies</h2>
+        <h2 class="card-title widget-title" data-info="dailySessions" tabindex="0" role="button">Dagelijkse sessies</h2>
         <p class="card-subtitle">Deze periode vs. vorige periode</p>
         <div class="chart-wrap">
           <canvas id="lineChart"></canvas>
         </div>
       </div>
       <div class="chart-card chart-donut">
-        <h2 class="card-title">Sessies per kanaal</h2>
+        <h2 class="card-title widget-title" data-info="channelDonut" tabindex="0" role="button">Sessies per kanaal</h2>
         <p class="card-subtitle">Verdeling van verkeer</p>
         <div class="chart-wrap">
           <canvas id="donutChart"></canvas>
@@ -127,7 +127,7 @@
 
     <!-- Table -->
     <section class="table-card">
-      <h2 class="card-title">Offerteaanvragen per pagina</h2>
+      <h2 class="card-title widget-title" data-info="offerteByPage" tabindex="0" role="button">Offerteaanvragen per pagina</h2>
       <p class="card-subtitle">Aantal "offerte_form_succes" events per pagina</p>
       <div class="table-wrap">
         <table id="offerteTable">
@@ -146,7 +146,7 @@
 
     <!-- Campaign Table -->
     <section class="table-card">
-      <h2 class="card-title">Offerteaanvragen per campagne</h2>
+      <h2 class="card-title widget-title" data-info="offerteByCampaign" tabindex="0" role="button">Offerteaanvragen per campagne</h2>
       <p class="card-subtitle">Betaalde ads — "offerte_form_succes" events per campagne</p>
       <div class="table-wrap">
         <table id="offerteCampaignTable">
@@ -168,6 +168,14 @@
       <p>White Vision Analytics Dashboard — <span id="footerRange">7 dagen</span></p>
     </footer>
   </div>
+
+  <!-- Widget info sidebar -->
+  <div class="info-overlay" id="infoOverlay"></div>
+  <aside class="info-sidebar" id="infoSidebar" aria-hidden="true">
+    <button class="info-close" id="infoClose" aria-label="Sluiten">✕</button>
+    <h3 class="info-title" id="infoTitle"></h3>
+    <p class="info-body" id="infoBody"></p>
+  </aside>
 
   <script src="app.js"></script>
 </body>

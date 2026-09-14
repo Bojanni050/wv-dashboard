@@ -296,6 +296,69 @@
     }
   }
 
+  // --- Widget info sidebar ---
+  var widgetInfo = {
+    sessions: 'Aantal sessies (bezoeken) op de website in de geselecteerde periode, gemeten via Google Analytics 4.',
+    users: 'Aantal unieke gebruikers dat de website heeft bezocht in de geselecteerde periode.',
+    pageviews: 'Totaal aantal paginaweergaven in de geselecteerde periode.',
+    offertes: 'Aantal succesvolle offerteaanvragen ("offerte_form_succes" events) in de geselecteerde periode.',
+    paidAds: 'Aantal sessies via betaalde advertenties: elk GA4-kanaal dat begint met "Paid", zoals Paid Search en Paid Social.',
+    social: 'Aantal sessies via organisch social verkeer (Organic Social kanaal) — dus niet via betaalde social ads.',
+    search: 'Aantal sessies via organische zoekresultaten (Organic Search kanaal).',
+    overig: 'Aantal sessies via overige kanalen: Direct, Referral, Organic Video en niet-geclassificeerd verkeer.',
+    conversionTotal: 'Percentage van alle gebruikers dat een offerteaanvraag heeft ingediend: offertes gedeeld door totaal aantal gebruikers.',
+    conversionPaid: 'Conversieratio van bezoekers via betaalde ads: offerteaanvragen via betaalde kanalen gedeeld door sessies via betaalde kanalen.',
+    conversionSocial: 'Conversieratio van bezoekers via organic social: offerteaanvragen via Organic Social gedeeld door sessies via Organic Social.',
+    dailySessions: 'Dagelijks aantal sessies in de geselecteerde periode, vergeleken met dezelfde periode ervoor.',
+    channelDonut: 'Verdeling van sessies over de GA4-kanalen (Direct, Organic Search, Paid Search, Referral, etc.) in de geselecteerde periode.',
+    offerteByPage: 'Aantal offerteaanvragen per pagina waarop het formulier is ingevuld.',
+    offerteByCampaign: 'Aantal offerteaanvragen via betaalde ads, gegroepeerd per campagnenaam (utm_campaign). Toont "(referral)" of "(not set)" wanneer de advertentie niet getagd is.',
+  };
+
+  var infoSidebar = document.getElementById('infoSidebar');
+  var infoOverlay = document.getElementById('infoOverlay');
+  var infoTitle = document.getElementById('infoTitle');
+  var infoBody = document.getElementById('infoBody');
+  var infoClose = document.getElementById('infoClose');
+  var lastFocusedEl = null;
+
+  function openInfoSidebar(titleEl) {
+    var key = titleEl.dataset.info;
+    var description = widgetInfo[key];
+    if (!description) return;
+
+    lastFocusedEl = titleEl;
+    infoTitle.textContent = titleEl.textContent;
+    infoBody.textContent = description;
+    infoSidebar.classList.add('open');
+    infoOverlay.classList.add('open');
+    infoSidebar.setAttribute('aria-hidden', 'false');
+    infoClose.focus();
+  }
+
+  function closeInfoSidebar() {
+    infoSidebar.classList.remove('open');
+    infoOverlay.classList.remove('open');
+    infoSidebar.setAttribute('aria-hidden', 'true');
+    if (lastFocusedEl) lastFocusedEl.focus();
+  }
+
+  document.querySelectorAll('.widget-title').forEach(function (el) {
+    el.addEventListener('click', function () { openInfoSidebar(el); });
+    el.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openInfoSidebar(el);
+      }
+    });
+  });
+
+  infoClose.addEventListener('click', closeInfoSidebar);
+  infoOverlay.addEventListener('click', closeInfoSidebar);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && infoSidebar.classList.contains('open')) closeInfoSidebar();
+  });
+
   // --- Auto refresh (30 min) ---
   function scheduleAutoRefresh() {
     if (refreshTimer) clearInterval(refreshTimer);
