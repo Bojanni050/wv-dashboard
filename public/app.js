@@ -361,7 +361,7 @@
     sessions: 'Aantal sessies (bezoeken) op de website in de geselecteerde periode, gemeten via Google Analytics 4.',
     users: 'Aantal unieke gebruikers dat de website heeft bezocht in de geselecteerde periode.',
     pageviews: 'Totaal aantal paginaweergaven in de geselecteerde periode.',
-    offertes: 'Aantal succesvolle offerteaanvragen ("offerte_form_succes" events) in de geselecteerde periode.',
+    offertes: 'Aantal succesvolle offerteaanvragen ("gforms_submission" events) in de geselecteerde periode.',
     paidAds: 'Aantal sessies via betaalde advertenties: elk GA4-kanaal dat begint met "Paid", zoals Paid Search en Paid Social.',
     social: 'Aantal sessies via organisch social verkeer (Organic Social kanaal) — dus niet via betaalde social ads.',
     search: 'Aantal sessies via organische zoekresultaten (Organic Search kanaal).',

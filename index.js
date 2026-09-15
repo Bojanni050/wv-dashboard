@@ -239,7 +239,7 @@ async function fetchOfferteByPage(dateRange) {
     dimensionFilter: {
       filter: {
         fieldName: 'eventName',
-        stringFilter: { matchType: 'EXACT', value: 'offerte_form_succes' },
+        stringFilter: { matchType: 'EXACT', value: 'gforms_submission' },
       },
     },
     orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }],
@@ -260,7 +260,7 @@ async function fetchOfferteByChannel(dateRange) {
     dimensionFilter: {
       filter: {
         fieldName: 'eventName',
-        stringFilter: { matchType: 'EXACT', value: 'offerte_form_succes' },
+        stringFilter: { matchType: 'EXACT', value: 'gforms_submission' },
       },
     },
   });
@@ -283,7 +283,7 @@ async function fetchOfferteByCampaign(dateRange) {
           {
             filter: {
               fieldName: 'eventName',
-              stringFilter: { matchType: 'EXACT', value: 'offerte_form_succes' },
+              stringFilter: { matchType: 'EXACT', value: 'gforms_submission' },
             },
           },
           {
