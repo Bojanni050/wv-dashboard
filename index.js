@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 3001;
 
 const PROPERTY_ID = process.env.GA4_PROPERTY_ID || '368911252';
 
-const VALID_RANGES = ['7', '28', '90', 'month', 'lastweek', 'custom'];
+const VALID_RANGES = ['today', 'yesterday', '7', '90', 'month', 'custom'];
 const VALID_COMPARE = ['previous', 'year'];
 const MAX_CUSTOM_RANGE_DAYS = 366;
 
@@ -100,7 +100,7 @@ function resolveRangeParam(query) {
   return { rangeParam: '7' };
 }
 
-// rangeParam is '7' | '28' | '90' | 'month' | 'lastweek' | 'custom'
+// rangeParam is 'today' | 'yesterday' | '7' | '90' | 'month' | 'custom'
 function resolveCurrentRange(rangeParam, customStart, customEnd) {
   const end = new Date();
 
@@ -108,21 +108,19 @@ function resolveCurrentRange(rangeParam, customStart, customEnd) {
     return { start: customStart, end: customEnd };
   }
 
+  if (rangeParam === 'today') {
+    return { start: formatDate(end), end: formatDate(end) };
+  }
+
+  if (rangeParam === 'yesterday') {
+    const yesterday = new Date(end);
+    yesterday.setDate(end.getDate() - 1);
+    return { start: formatDate(yesterday), end: formatDate(yesterday) };
+  }
+
   if (rangeParam === 'month') {
     const start = new Date(end.getFullYear(), end.getMonth(), 1);
     return { start: formatDate(start), end: formatDate(end) };
-  }
-
-  if (rangeParam === 'lastweek') {
-    const dayOfWeek = end.getDay(); // 0 = Sunday .. 6 = Saturday
-    const diffToMonday = (dayOfWeek + 6) % 7;
-    const thisMonday = new Date(end);
-    thisMonday.setDate(end.getDate() - diffToMonday);
-    const lastMonday = new Date(thisMonday);
-    lastMonday.setDate(thisMonday.getDate() - 7);
-    const lastSunday = new Date(lastMonday);
-    lastSunday.setDate(lastMonday.getDate() + 6);
-    return { start: formatDate(lastMonday), end: formatDate(lastSunday) };
   }
 
   const start = new Date();

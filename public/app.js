@@ -48,7 +48,7 @@
     if (res.ok) boot();
   }
 
-  var RANGE_LABELS = { '7': '7 dagen', '28': '28 dagen', '90': '90 dagen', month: 'deze maand', lastweek: 'vorige week' };
+  var RANGE_LABELS = { today: 'vandaag', yesterday: 'gisteren', '7': '7 dagen', '90': '90 dagen', month: 'deze maand' };
   var COMPARE_LABELS = { previous: 'vorige periode', year: 'zelfde periode vorig jaar' };
 
   function capitalize(s) {
