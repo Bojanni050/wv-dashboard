@@ -313,6 +313,7 @@
 
   function renderTable(data) {
     renderRowsTable('offerteTableBody', data.offerteByPage, 'page', 'Geen offerteaanvragen in deze periode');
+    renderRowsTable('offerteChannelTableBody', data.offerteByChannel, 'channel', 'Geen offerteaanvragen in deze periode');
     renderRowsTable('offerteCampaignTableBody', data.offerteByCampaign, 'campaign', 'Geen offerteaanvragen via betaalde ads in deze periode');
   }
 
@@ -352,6 +353,7 @@
       console.error('Load error:', err);
       var errorRow = '<tr><td colspan="2" class="empty-row">Fout bij laden van gegevens</td></tr>';
       document.getElementById('offerteTableBody').innerHTML = errorRow;
+      document.getElementById('offerteChannelTableBody').innerHTML = errorRow;
       document.getElementById('offerteCampaignTableBody').innerHTML = errorRow;
     }
   }
@@ -372,6 +374,7 @@
     dailySessions: 'Dagelijks aantal sessies in de geselecteerde periode, vergeleken met dezelfde periode ervoor.',
     channelDonut: 'Verdeling van sessies over de GA4-kanalen (Direct, Organic Search, Paid Search, Referral, etc.) in de geselecteerde periode.',
     offerteByPage: 'Aantal offerteaanvragen per pagina waarop het formulier is ingevuld.',
+    offerteByChannel: 'Aantal offerteaanvragen per GA4-kanaal (Direct, Organic Search, Paid Search, Paid Social, Referral, etc.). Hiermee zie je direct of bezoekers die via een advertentie binnenkwamen ook daadwerkelijk het formulier hebben ingevuld.',
     offerteByCampaign: 'Aantal offerteaanvragen via betaalde ads, gegroepeerd per campagnenaam (utm_campaign). Toont "(referral)" of "(not set)" wanneer de advertentie niet getagd is.',
   };
 

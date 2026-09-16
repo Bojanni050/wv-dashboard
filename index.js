@@ -263,6 +263,7 @@ async function fetchOfferteByChannel(dateRange) {
         stringFilter: { matchType: 'EXACT', value: 'gforms_submission' },
       },
     },
+    orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }],
   });
 
   return (response.rows || []).map((row) => ({
@@ -457,6 +458,7 @@ app.get('/api/analytics', basicAuth, async (req, res) => {
       },
       channels,
       offerteByPage,
+      offerteByChannel,
       offerteByCampaign,
       dailySessions,
       dailySessionsPrev,
