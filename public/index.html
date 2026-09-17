@@ -267,6 +267,37 @@
         </form>
         <p class="reports-upload-status" id="googleAdsStatus" hidden></p>
       </section>
+
+      <section class="kpi-grid" id="googleAdsAnalyticsKpiGrid" style="margin-top: 32px;">
+        <div class="kpi-tile">
+          <p class="kpi-label widget-title" data-info="paidAds" tabindex="0" role="button">Bezoekers via Paid Ads</p>
+          <p class="kpi-value" id="kpi-paidads-ads">—</p>
+          <p class="kpi-change" id="kpi-paidads-ads-change"></p>
+        </div>
+        <div class="kpi-tile">
+          <p class="kpi-label widget-title" data-info="conversionPaid" tabindex="0" role="button">Conversie betaalde bezoekers</p>
+          <p class="kpi-value" id="kpi-conv-paid-ads">—</p>
+          <p class="kpi-change" id="kpi-conv-paid-ads-change"></p>
+        </div>
+      </section>
+
+      <section class="table-card">
+        <h2 class="card-title widget-title" data-info="offerteByCampaign" tabindex="0" role="button">Offerteaanvragen per campagne</h2>
+        <p class="card-subtitle">Betaalde ads — "gforms_submission" events per campagne</p>
+        <div class="table-wrap">
+          <table id="offerteCampaignTable-ads">
+            <thead>
+              <tr>
+                <th>Campagne</th>
+                <th class="th-right">Aantal</th>
+              </tr>
+            </thead>
+            <tbody id="offerteCampaignTableBody-ads">
+              <tr><td colspan="2" class="loading-row">Laden…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
     <!-- /Google Ads tab -->
 

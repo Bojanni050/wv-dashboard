@@ -120,6 +120,9 @@
     document.getElementById('kpi-paidads').textContent = formatNumber(k.paidAds.current);
     formatChangeEl(document.getElementById('kpi-paidads-change'), k.paidAds.change);
 
+    document.getElementById('kpi-paidads-ads').textContent = formatNumber(k.paidAds.current);
+    formatChangeEl(document.getElementById('kpi-paidads-ads-change'), k.paidAds.change);
+
     document.getElementById('kpi-social').textContent = formatNumber(k.social.current);
     formatChangeEl(document.getElementById('kpi-social-change'), k.social.change);
 
@@ -134,6 +137,9 @@
 
     document.getElementById('kpi-conv-paid').textContent = formatConversion(k.conversionPaid.current);
     formatChangeEl(document.getElementById('kpi-conv-paid-change'), k.conversionPaid.change);
+
+    document.getElementById('kpi-conv-paid-ads').textContent = formatConversion(k.conversionPaid.current);
+    formatChangeEl(document.getElementById('kpi-conv-paid-ads-change'), k.conversionPaid.change);
 
     document.getElementById('kpi-conv-social').textContent = formatConversion(k.conversionSocial.current);
     formatChangeEl(document.getElementById('kpi-conv-social-change'), k.conversionSocial.change);
@@ -319,6 +325,7 @@
     renderRowsTable('offerteTableBody', data.offerteByPage, 'page', 'Geen offerteaanvragen in deze periode');
     renderRowsTable('offerteChannelTableBody', data.offerteByChannel, 'channel', 'Geen offerteaanvragen in deze periode');
     renderRowsTable('offerteCampaignTableBody', data.offerteByCampaign, 'campaign', 'Geen offerteaanvragen via betaalde ads in deze periode');
+    renderRowsTable('offerteCampaignTableBody-ads', data.offerteByCampaign, 'campaign', 'Geen offerteaanvragen via betaalde ads in deze periode');
   }
 
   function escapeHtml(str) {
@@ -359,6 +366,7 @@
       document.getElementById('offerteTableBody').innerHTML = errorRow;
       document.getElementById('offerteChannelTableBody').innerHTML = errorRow;
       document.getElementById('offerteCampaignTableBody').innerHTML = errorRow;
+      document.getElementById('offerteCampaignTableBody-ads').innerHTML = errorRow;
     }
   }
 
