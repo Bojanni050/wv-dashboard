@@ -81,6 +81,14 @@
     else el.classList.add('neutral');
   }
 
+  // Sets a KPI tile's main value, with the previous-period value appended
+  // in parentheses (colored to match the direction of change).
+  function setKpiValue(elId, current, previous, change, formatFn) {
+    var el = document.getElementById(elId);
+    var cls = change > 0 ? 'up' : change < 0 ? 'down' : 'neutral';
+    el.innerHTML = escapeHtml(formatFn(current)) + ' <span class="kpi-prev ' + cls + '">(' + escapeHtml(formatFn(previous)) + ')</span>';
+  }
+
   function shortDate(dateStr) {
     const d = new Date(dateStr);
     return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
@@ -105,43 +113,43 @@
   function updateKPIs(data) {
     const k = data.kpis;
 
-    document.getElementById('kpi-sessions').textContent = formatNumber(k.sessions.current);
+    setKpiValue('kpi-sessions', k.sessions.current, k.sessions.previous, k.sessions.change, formatNumber);
     formatChangeEl(document.getElementById('kpi-sessions-change'), k.sessions.change);
 
-    document.getElementById('kpi-users').textContent = formatNumber(k.users.current);
+    setKpiValue('kpi-users', k.users.current, k.users.previous, k.users.change, formatNumber);
     formatChangeEl(document.getElementById('kpi-users-change'), k.users.change);
 
-    document.getElementById('kpi-pageviews').textContent = formatNumber(k.pageviews.current);
+    setKpiValue('kpi-pageviews', k.pageviews.current, k.pageviews.previous, k.pageviews.change, formatNumber);
     formatChangeEl(document.getElementById('kpi-pageviews-change'), k.pageviews.change);
 
-    document.getElementById('kpi-offertes').textContent = formatNumber(k.offertes.current);
+    setKpiValue('kpi-offertes', k.offertes.current, k.offertes.previous, k.offertes.change, formatNumber);
     formatChangeEl(document.getElementById('kpi-offertes-change'), k.offertes.change);
 
-    document.getElementById('kpi-paidads').textContent = formatNumber(k.paidAds.current);
+    setKpiValue('kpi-paidads', k.paidAds.current, k.paidAds.previous, k.paidAds.change, formatNumber);
     formatChangeEl(document.getElementById('kpi-paidads-change'), k.paidAds.change);
 
-    document.getElementById('kpi-paidads-ads').textContent = formatNumber(k.paidAds.current);
+    setKpiValue('kpi-paidads-ads', k.paidAds.current, k.paidAds.previous, k.paidAds.change, formatNumber);
     formatChangeEl(document.getElementById('kpi-paidads-ads-change'), k.paidAds.change);
 
-    document.getElementById('kpi-social').textContent = formatNumber(k.social.current);
+    setKpiValue('kpi-social', k.social.current, k.social.previous, k.social.change, formatNumber);
     formatChangeEl(document.getElementById('kpi-social-change'), k.social.change);
 
-    document.getElementById('kpi-search').textContent = formatNumber(k.search.current);
+    setKpiValue('kpi-search', k.search.current, k.search.previous, k.search.change, formatNumber);
     formatChangeEl(document.getElementById('kpi-search-change'), k.search.change);
 
-    document.getElementById('kpi-overig').textContent = formatNumber(k.overig.current);
+    setKpiValue('kpi-overig', k.overig.current, k.overig.previous, k.overig.change, formatNumber);
     formatChangeEl(document.getElementById('kpi-overig-change'), k.overig.change);
 
-    document.getElementById('kpi-conv-total').textContent = formatConversion(k.conversionTotal.current);
+    setKpiValue('kpi-conv-total', k.conversionTotal.current, k.conversionTotal.previous, k.conversionTotal.change, formatConversion);
     formatChangeEl(document.getElementById('kpi-conv-total-change'), k.conversionTotal.change);
 
-    document.getElementById('kpi-conv-paid').textContent = formatConversion(k.conversionPaid.current);
+    setKpiValue('kpi-conv-paid', k.conversionPaid.current, k.conversionPaid.previous, k.conversionPaid.change, formatConversion);
     formatChangeEl(document.getElementById('kpi-conv-paid-change'), k.conversionPaid.change);
 
-    document.getElementById('kpi-conv-paid-ads').textContent = formatConversion(k.conversionPaid.current);
+    setKpiValue('kpi-conv-paid-ads', k.conversionPaid.current, k.conversionPaid.previous, k.conversionPaid.change, formatConversion);
     formatChangeEl(document.getElementById('kpi-conv-paid-ads-change'), k.conversionPaid.change);
 
-    document.getElementById('kpi-conv-social').textContent = formatConversion(k.conversionSocial.current);
+    setKpiValue('kpi-conv-social', k.conversionSocial.current, k.conversionSocial.previous, k.conversionSocial.change, formatConversion);
     formatChangeEl(document.getElementById('kpi-conv-social-change'), k.conversionSocial.change);
   }
 

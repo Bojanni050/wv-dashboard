@@ -488,6 +488,16 @@ body.is-locked .dashboard {
 .kpi-change.down { color: var(--red); }
 .kpi-change.neutral { color: var(--text-muted); }
 
+.kpi-prev {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.kpi-prev.up { color: var(--green); }
+.kpi-prev.down { color: var(--red); }
+.kpi-prev.neutral { color: var(--text-muted); }
+
 /* Charts */
 .charts-grid {
   display: grid;
