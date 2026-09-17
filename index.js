@@ -8,6 +8,7 @@ const multer = require('multer');
 const { BetaAnalyticsDataClient } = require('@google-analytics/data');
 
 const app = express();
+app.use(express.json());
 const PORT = process.env.PORT || 3001;
 
 const PROPERTY_ID = process.env.GA4_PROPERTY_ID || '368911252';
@@ -546,6 +547,56 @@ app.get('/api/reports/:id', basicAuth, (req, res) => {
   if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Bestand niet gevonden' });
 
   res.download(filePath, entry.originalName);
+});
+
+// --- Google Ads (admin fills in manually, data comes from Strato rankingcoach) ---
+
+const DATA_DIR = path.join(__dirname, 'data');
+const GOOGLE_ADS_FILE = path.join(DATA_DIR, 'google-ads.json');
+
+function ensureDataDir() {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
+function readGoogleAds() {
+  ensureDataDir();
+  if (!fs.existsSync(GOOGLE_ADS_FILE)) {
+    return { clicks: 0, costOfClicks: 0, costPerClick: 0, updatedAt: null };
+  }
+  try {
+    return JSON.parse(fs.readFileSync(GOOGLE_ADS_FILE, 'utf8'));
+  } catch (err) {
+    console.error('Google Ads data read error:', err.message);
+    return { clicks: 0, costOfClicks: 0, costPerClick: 0, updatedAt: null };
+  }
+}
+
+function isNonNegativeNumber(n) {
+  return typeof n === 'number' && isFinite(n) && n >= 0;
+}
+
+app.get('/api/google-ads', basicAuth, (req, res) => {
+  res.json(readGoogleAds());
+});
+
+app.put('/api/google-ads', basicAuth, requireAdmin, (req, res) => {
+  const { clicks, costOfClicks, costPerClick } = req.body || {};
+
+  if (!isNonNegativeNumber(clicks) || !isNonNegativeNumber(costOfClicks) || !isNonNegativeNumber(costPerClick)) {
+    return res.status(400).json({ error: 'Klikken, kosten en kost per klik moeten geldige getallen zijn (0 of hoger).' });
+  }
+
+  const entry = {
+    clicks,
+    costOfClicks,
+    costPerClick,
+    updatedAt: new Date().toISOString(),
+  };
+
+  ensureDataDir();
+  fs.writeFileSync(GOOGLE_ADS_FILE, JSON.stringify(entry, null, 2));
+
+  res.json(entry);
 });
 
 // --- Serve static frontend ---

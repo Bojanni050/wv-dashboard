@@ -65,6 +65,10 @@
     return sign + n + '%';
   }
 
+  function formatCurrency(n) {
+    return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(n);
+  }
+
   function formatConversion(n) {
     return n.toLocaleString('nl-NL', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
   }
@@ -376,6 +380,9 @@
     offerteByPage: 'Aantal offerteaanvragen per pagina waarop het formulier is ingevuld.',
     offerteByChannel: 'Aantal offerteaanvragen per GA4-kanaal (Direct, Organic Search, Paid Search, Paid Social, Referral, etc.). Hiermee zie je direct of bezoekers die via een advertentie binnenkwamen ook daadwerkelijk het formulier hebben ingevuld.',
     offerteByCampaign: 'Aantal offerteaanvragen via betaalde ads, gegroepeerd per campagnenaam (utm_campaign). Toont "(referral)" of "(not set)" wanneer de advertentie niet getagd is.',
+    gaClicks: 'Aantal klikken op de Google Ads-campagnes. Deze data komt via Strato rankingcoach en wordt handmatig door Admin bijgewerkt.',
+    gaCostOfClicks: 'Totale advertentiekosten van de Google Ads-klikken. Deze data komt via Strato rankingcoach en wordt handmatig door Admin bijgewerkt.',
+    gaCostPerClick: 'Gemiddelde kost per klik (CPC) op de Google Ads-campagnes. Deze data komt via Strato rankingcoach en wordt handmatig door Admin bijgewerkt.',
   };
 
   var infoSidebar = document.getElementById('infoSidebar');
@@ -500,6 +507,7 @@
 
   // --- Tabs ---
   var reportsLoaded = false;
+  var googleAdsLoaded = false;
 
   document.querySelectorAll('.tab-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {
@@ -508,11 +516,16 @@
 
       var tab = btn.dataset.tab;
       document.getElementById('dashboardView').hidden = tab !== 'dashboard';
+      document.getElementById('googleadsView').hidden = tab !== 'googleads';
       document.getElementById('reportsView').hidden = tab !== 'reports';
 
       if (tab === 'reports' && !reportsLoaded) {
         reportsLoaded = true;
         loadReports();
+      }
+      if (tab === 'googleads' && !googleAdsLoaded) {
+        googleAdsLoaded = true;
+        loadGoogleAds();
       }
     });
   });
@@ -537,6 +550,7 @@
       var data = await res.json();
       isAdmin = data.role === 'admin';
       document.getElementById('reportsUploadSection').hidden = !isAdmin;
+      document.getElementById('googleAdsEditSection').hidden = !isAdmin;
     } catch (err) {
       console.error('Role fetch error:', err);
     }
@@ -630,6 +644,71 @@
       loadReports();
     } catch (err) {
       setUploadStatus(err.message, true);
+    }
+  });
+
+  // --- Google Ads ---
+  async function loadGoogleAds() {
+    try {
+      var res = await apiFetch('/api/google-ads', { headers: { Accept: 'application/json' } });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      var data = await res.json();
+
+      document.getElementById('ga-clicks').textContent = formatNumber(data.clicks);
+      document.getElementById('ga-cost').textContent = formatCurrency(data.costOfClicks);
+      document.getElementById('ga-cpc').textContent = formatCurrency(data.costPerClick);
+
+      var updatedEl = document.getElementById('googleAdsUpdatedAt');
+      updatedEl.textContent = data.updatedAt
+        ? 'Laatst bijgewerkt: ' + new Date(data.updatedAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : 'Nog niet ingevuld';
+
+      document.getElementById('gaClicksInput').value = data.clicks;
+      document.getElementById('gaCostInput').value = data.costOfClicks;
+      document.getElementById('gaCpcInput').value = data.costPerClick;
+    } catch (err) {
+      console.error('Google Ads load error:', err);
+      document.getElementById('ga-clicks').textContent = '—';
+      document.getElementById('ga-cost').textContent = '—';
+      document.getElementById('ga-cpc').textContent = '—';
+    }
+  }
+
+  function setGoogleAdsStatus(message, isError) {
+    var el = document.getElementById('googleAdsStatus');
+    el.textContent = message;
+    el.hidden = !message;
+    el.classList.toggle('error', Boolean(isError));
+    el.classList.toggle('success', !isError);
+  }
+
+  document.getElementById('googleAdsForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    var clicks = parseInt(document.getElementById('gaClicksInput').value, 10);
+    var costOfClicks = parseFloat(document.getElementById('gaCostInput').value);
+    var costPerClick = parseFloat(document.getElementById('gaCpcInput').value);
+
+    if (!isFinite(clicks) || clicks < 0 || !isFinite(costOfClicks) || costOfClicks < 0 || !isFinite(costPerClick) || costPerClick < 0) {
+      setGoogleAdsStatus('Vul geldige, positieve getallen in.', true);
+      return;
+    }
+
+    setGoogleAdsStatus('Opslaan…', false);
+    try {
+      var res = await apiFetch('/api/google-ads', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clicks: clicks, costOfClicks: costOfClicks, costPerClick: costPerClick }),
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Opslaan mislukt');
+
+      setGoogleAdsStatus('Opgeslagen.', false);
+      googleAdsLoaded = true;
+      loadGoogleAds();
+    } catch (err) {
+      setGoogleAdsStatus(err.message, true);
     }
   });
 

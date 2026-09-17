@@ -2,6 +2,7 @@ node_modules
 .env
 service-account.json
 reports/
+data/
 .git
 .bolt
 README.md

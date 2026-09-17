@@ -69,6 +69,7 @@
     <!-- Tabs -->
     <nav class="tabs">
       <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+      <button class="tab-btn" data-tab="googleads">Google Ads</button>
       <button class="tab-btn" data-tab="reports">Rapporten</button>
     </nav>
 
@@ -227,6 +228,47 @@
 
     </div>
     <!-- /Dashboard tab -->
+
+    <!-- Google Ads tab -->
+    <div id="googleadsView" hidden>
+      <section class="kpi-grid kpi-grid-3" id="googleAdsKpiGrid">
+        <div class="kpi-tile">
+          <p class="kpi-label widget-title" data-info="gaClicks" tabindex="0" role="button">Klikken</p>
+          <p class="kpi-value" id="ga-clicks">—</p>
+        </div>
+        <div class="kpi-tile">
+          <p class="kpi-label widget-title" data-info="gaCostOfClicks" tabindex="0" role="button">Kosten van Klikken</p>
+          <p class="kpi-value" id="ga-cost">—</p>
+        </div>
+        <div class="kpi-tile">
+          <p class="kpi-label widget-title" data-info="gaCostPerClick" tabindex="0" role="button">Kost per Klik</p>
+          <p class="kpi-value" id="ga-cpc">—</p>
+        </div>
+      </section>
+      <p class="card-subtitle" id="googleAdsUpdatedAt" style="margin: -20px 0 24px;"></p>
+
+      <section class="table-card" id="googleAdsEditSection" hidden>
+        <h2 class="card-title">Google Ads bijwerken</h2>
+        <p class="card-subtitle">Alleen zichtbaar voor Admin — data komt via Strato rankingcoach</p>
+        <form class="reports-upload" id="googleAdsForm">
+          <label class="login-field" style="width: 140px;">
+            <span>Klikken</span>
+            <input type="number" id="gaClicksInput" min="0" step="1" required />
+          </label>
+          <label class="login-field" style="width: 160px;">
+            <span>Kosten van Klikken (€)</span>
+            <input type="number" id="gaCostInput" min="0" step="0.01" required />
+          </label>
+          <label class="login-field" style="width: 160px;">
+            <span>Kost per Klik (€)</span>
+            <input type="number" id="gaCpcInput" min="0" step="0.01" required />
+          </label>
+          <button type="submit">Opslaan</button>
+        </form>
+        <p class="reports-upload-status" id="googleAdsStatus" hidden></p>
+      </section>
+    </div>
+    <!-- /Google Ads tab -->
 
     <!-- Reports tab -->
     <div id="reportsView" hidden>

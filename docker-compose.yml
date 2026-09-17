@@ -8,4 +8,5 @@ services:
     volumes:
       - ./service-account.json:/app/service-account.json:ro
       - ./reports:/app/reports
+      - ./data:/app/data
     restart: unless-stopped
