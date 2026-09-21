@@ -820,10 +820,10 @@ tbody tr:hover td {
 }
 
 .ai-explain-title {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--gold);
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
+  text-transform: none;
+  letter-spacing: 0.5px;
   font-weight: 700;
 }
 
