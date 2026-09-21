@@ -574,6 +574,7 @@
       document.getElementById('reportsUploadSection').hidden = !isAdmin;
       document.getElementById('googleAdsEditSection').hidden = !isAdmin;
       document.getElementById('aiTabBtn').hidden = !isAdmin;
+      if (isAdmin && reportsLoaded) loadReports();
     } catch (err) {
       console.error('Role fetch error:', err);
     }
@@ -596,7 +597,9 @@
           return '<tr><td>' + escapeHtml(r.originalName) + '</td><td>' + formatReportDate(r.uploadedAt) +
             '</td><td class="th-right">' + formatFileSize(r.size) +
             '</td><td class="th-right"><button type="button" class="reports-download-link" data-id="' + escapeHtml(r.id) +
-            '" data-name="' + escapeHtml(r.originalName) + '">Download</button></td></tr>';
+            '" data-name="' + escapeHtml(r.originalName) + '">Download</button>' +
+            (isAdmin ? ' <button type="button" class="reports-download-link reports-delete-link" data-delete-id="' + escapeHtml(r.id) +
+              '" data-name="' + escapeHtml(r.originalName) + '">Verwijderen</button>' : '') + '</td></tr>';
         })
         .join('');
     } catch (err) {
@@ -606,6 +609,23 @@
   }
 
   document.getElementById('reportsTableBody').addEventListener('click', async function (e) {
+    var delBtn = e.target.closest('button[data-delete-id]');
+    if (delBtn) {
+      if (!confirm('Rapport "' + delBtn.dataset.name + '" definitief verwijderen?')) return;
+      delBtn.disabled = true;
+      delBtn.textContent = 'Bezig…';
+      try {
+        var delRes = await apiFetch('/api/reports/' + encodeURIComponent(delBtn.dataset.deleteId), { method: 'DELETE' });
+        if (!delRes.ok) throw new Error('HTTP ' + delRes.status);
+        loadReports();
+      } catch (err) {
+        console.error('Delete error:', err);
+        delBtn.textContent = 'Mislukt';
+        setTimeout(function () { delBtn.disabled = false; delBtn.textContent = 'Verwijderen'; }, 2000);
+      }
+      return;
+    }
+
     var btn = e.target.closest('button[data-id]');
     if (!btn) return;
 

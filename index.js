@@ -557,6 +557,22 @@ app.get('/api/reports/:id', basicAuth, (req, res) => {
   res.download(filePath, entry.originalName);
 });
 
+app.delete('/api/reports/:id', basicAuth, requireAdmin, (req, res) => {
+  const list = readReportsIndex();
+  const entry = list.find((r) => r.id === req.params.id);
+  if (!entry) return res.status(404).json({ error: 'Rapport niet gevonden' });
+
+  const filePath = path.join(REPORTS_DIR, entry.id + '.pdf');
+  try {
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  } catch (err) {
+    console.error('Report delete error:', err.message);
+    return res.status(500).json({ error: 'Bestand verwijderen mislukt' });
+  }
+  writeReportsIndex(list.filter((r) => r.id !== entry.id));
+  res.json({ ok: true });
+});
+
 // --- Google Ads (admin fills in manually, data comes from Strato rankingcoach) ---
 
 const DATA_DIR = path.join(__dirname, 'data');

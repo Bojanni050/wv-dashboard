@@ -91,6 +91,7 @@ const SYSTEM_PROMPT =
   'De lezer is een ondernemer zonder technische achtergrond. Schrijf in helder, vriendelijk Nederlands, in de wij/jullie-vorm waar dat past. ' +
   'Leg in gewone woorden uit wat de cijfers van afgelopen week betekenen: wat gaat goed, wat valt op en wat is de belangrijkste les. ' +
   'Gebruik alleen de aangeleverde cijfers en verzin niets. Noem geen oorzaken die je niet uit de data kunt afleiden; formuleer die dan als mogelijke verklaring. ' +
+  'Begin direct met de inhoud: geen aanhef (zoals "Beste" of "Hallo") en geen afsluitende groet, ondertekening of slotzin als "Met vriendelijke groet". ' +
   'Schrijf 120 tot 200 woorden in 2 tot 3 alinea\'s, zonder kopjes, opsommingstekens, markdown of emoji.';
 
 function buildPromptData(data, ranges, googleAds) {
@@ -139,6 +140,17 @@ function cleanText(text) {
     .trim();
 }
 
+// Models sometimes add a salutation or sign-off despite the prompt; drop those paragraphs.
+function stripGreetings(text) {
+  const paras = text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+  const isOpening = (p) => /^(beste|geachte|hallo|hoi|hi|goedemorgen|goedemiddag|lieve)\b/i.test(p) && p.length < 60;
+  const isClosing = (p) => /^(met )?(vriendelijke|hartelijke|warme|sportieve)?\s*(groet|groeten)\b/i.test(p) && p.length < 80;
+  const isSignature = (p) => /^(white vision|het (white vision )?team)\W*$/i.test(p);
+  while (paras.length > 1 && isOpening(paras[0])) paras.shift();
+  while (paras.length > 1 && (isClosing(paras[paras.length - 1]) || isSignature(paras[paras.length - 1]))) paras.pop();
+  return paras.join('\n\n');
+}
+
 async function writeIntro(data, ranges, googleAds) {
   const settings = ai.readSettings();
   try {
@@ -147,7 +159,7 @@ async function writeIntro(data, ranges, googleAds) {
       SYSTEM_PROMPT,
       'Cijfers als JSON:\n' + JSON.stringify(buildPromptData(data, ranges, googleAds), null, 2)
     );
-    return { text: cleanText(text), ai: true };
+    return { text: stripGreetings(cleanText(text)), ai: true };
   } catch (err) {
     console.error('Weekly report AI intro failed, using fallback:', err.message);
     return { text: fallbackIntro(data, ranges), ai: false, error: err.message };
@@ -175,20 +187,31 @@ function renderPdf(data, ranges, intro) {
       if (doc.y + h > bottom()) doc.addPage();
     };
 
-    // Header
-    const logoPath = path.join(__dirname, 'public', 'logo-mark.png');
-    if (fs.existsSync(logoPath)) doc.image(logoPath, left, 45, { height: 42 });
-    doc.font('Helvetica-Bold').fontSize(20).fillColor(INK).text('Weekrapport', left + 40, 48);
-    doc.font('Helvetica').fontSize(10).fillColor(MUTED)
-      .text('White Vision - ' + nlDate(ranges.current.start) + ' t/m ' + nlDate(ranges.current.end, true), left + 40, 72);
-    doc.moveTo(left, 100).lineTo(left + width, 100).strokeColor(GOLD).lineWidth(1.5).stroke();
-    doc.y = 118;
+    // Header: logo, 20pt gap, then brand name + tagline
+    const LOGO_H = 52;
+    const LOGO_W = LOGO_H * (1880 / 1960);
+    const LOGO_GAP = 20;
+    const logoPath = path.join(__dirname, 'public', 'logo-print.png');
+    if (fs.existsSync(logoPath)) doc.image(logoPath, left, 38, { height: LOGO_H });
+    const textX = left + LOGO_W + LOGO_GAP;
+    doc.font('Helvetica-Bold').fontSize(22).fillColor(INK).text('White Vision', textX, 45, { lineBreak: false });
+    doc.font('Helvetica').fontSize(8).fillColor(GOLD)
+      .text('UNIEK. STIJLVOL. ONVERGETELIJK.', textX, 73, { characterSpacing: 1.5, lineBreak: false });
+    doc.moveTo(left, 100).lineTo(left + width, 100).strokeColor(LINE).lineWidth(0.5).stroke();
+
+    doc.font('Helvetica-Bold').fontSize(16).fillColor(INK).text('Weekrapport Analytics', left, 118, { lineBreak: false });
+    doc.font('Helvetica').fontSize(9).fillColor(MUTED).text(
+      'Periode: ' + nlDate(ranges.current.start, true) + ' t/m ' + nlDate(ranges.current.end, true) +
+        ' (vorige week)  |  Vergeleken met de week ervoor',
+      left, 142, { lineBreak: false }
+    );
+    doc.y = 166;
 
     const heading = (text) => {
-      ensureSpace(60);
-      doc.moveDown(0.8);
-      doc.font('Helvetica-Bold').fontSize(13).fillColor(GOLD).text(text, left, doc.y);
-      doc.moveDown(0.4);
+      ensureSpace(90);
+      doc.moveDown(0.9);
+      doc.font('Helvetica-Bold').fontSize(12).fillColor(INK).text(text, left, doc.y);
+      doc.moveDown(0.5);
     };
 
     // Intro
@@ -197,6 +220,64 @@ function renderPdf(data, ranges, intro) {
       doc.moveDown(0.6);
     });
 
+    // KPI widgets (same look as the dashboard tiles)
+    const TILE_BG = '#f4f2ed';
+    const UP = '#2e7d32';
+    const DOWN = '#c62828';
+    const GAP = 10;
+    const TILE_H = 66;
+    const tiles = (items, cols) => {
+      const tileW = (width - GAP * (cols - 1)) / cols;
+      for (let i = 0; i < items.length; i += cols) {
+        ensureSpace(TILE_H + GAP);
+        const y = doc.y;
+        items.slice(i, i + cols).forEach((item, j) => {
+          const x = left + j * (tileW + GAP);
+          const color = item.change > 0 ? UP : item.change < 0 ? DOWN : MUTED;
+          doc.roundedRect(x, y, tileW, TILE_H, 6).fill(TILE_BG);
+          doc.font('Helvetica').fontSize(7.5).fillColor(MUTED)
+            .text(item.label.toUpperCase(), x + 10, y + 10, { width: tileW - 20, characterSpacing: 0.4, lineBreak: false });
+          doc.font('Helvetica-Bold').fontSize(18).fillColor(INK);
+          const value = item.fmt(item.current);
+          const valueW = doc.widthOfString(value);
+          doc.text(value, x + 10, y + 23, { lineBreak: false });
+          const prev = '(' + item.fmt(item.previous) + ')';
+          doc.font('Helvetica').fontSize(9);
+          if (10 + valueW + 5 + doc.widthOfString(prev) <= tileW - 8) {
+            doc.fillColor(color).text(prev, x + 10 + valueW + 5, y + 30, { lineBreak: false });
+          }
+          doc.font('Helvetica').fontSize(8).fillColor(color)
+            .text(fmtChange(item.change) + ' vs vorige week', x + 10, y + 50, { width: tileW - 20, lineBreak: false });
+        });
+        doc.y = y + TILE_H + GAP;
+      }
+    };
+    const k = data.kpis;
+    const tile = (label, key, fmt) => ({ label, fmt, current: k[key].current, previous: k[key].previous, change: k[key].change });
+
+    heading('Kerncijfers');
+    tiles([
+      tile('Sessies', 'sessions', fmtNum),
+      tile('Gebruikers', 'users', fmtNum),
+      tile('Paginaweergaven', 'pageviews', fmtNum),
+      tile('Offerteaanvragen', 'offertes', fmtNum),
+    ], 4);
+
+    heading('Verkeer per bron');
+    tiles([
+      tile('Via Paid Ads', 'paidAds', fmtNum),
+      tile('Via Social', 'social', fmtNum),
+      tile('Via Search', 'search', fmtNum),
+      tile('Overig', 'overig', fmtNum),
+    ], 4);
+
+    heading('Conversie');
+    tiles([
+      tile('Totaal gebruikers', 'conversionTotal', fmtPct),
+      tile('Betaalde bezoekers', 'conversionPaid', fmtPct),
+      tile('Socials', 'conversionSocial', fmtPct),
+    ], 3);
+
     // Simple table: columns = [{ label, width, align }]
     const table = (columns, rows) => {
       const rowH = 20;
@@ -204,76 +285,56 @@ function renderPdf(data, ranges, intro) {
         ensureSpace(rowH);
         const y = doc.y;
         let x = left;
-        doc.font(header ? 'Helvetica-Bold' : 'Helvetica').fontSize(header ? 9 : 10);
+        doc.font(header ? 'Helvetica-Bold' : 'Helvetica').fontSize(header ? 8 : 10);
         cells.forEach((cell, i) => {
           const col = columns[i];
-          const text = typeof cell === 'object' ? cell.text : cell;
-          doc.fillColor(typeof cell === 'object' && cell.color ? cell.color : header ? MUTED : INK)
-            .text(String(text), x + 4, y + 5, { width: col.width - 8, align: col.align || 'left', lineBreak: false, ellipsis: true });
+          doc.fillColor(header ? MUTED : INK)
+            .text(header ? String(cell).toUpperCase() : String(cell), x + 4, y + 5, {
+              width: col.width - 8, align: col.align || 'left', lineBreak: false, ellipsis: true,
+              characterSpacing: header ? 0.4 : 0,
+            });
           x += col.width;
         });
         doc.moveTo(left, y + rowH).lineTo(left + width, y + rowH).strokeColor(LINE).lineWidth(0.5).stroke();
         doc.y = y + rowH;
       };
       drawRow(columns.map((c) => c.label), true);
-      if (!rows.length) drawRow([{ text: 'Geen gegevens in deze periode', color: MUTED }].concat(columns.slice(1).map(() => '')), false);
+      if (!rows.length) drawRow(['Geen gegevens in deze periode'].concat(columns.slice(1).map(() => '')), false);
       rows.forEach((r) => drawRow(r, false));
     };
 
-    // KPIs
-    const k = data.kpis;
-    const changeCell = (c) => ({ text: fmtChange(c), color: c > 0 ? '#2e7d32' : c < 0 ? '#c62828' : MUTED });
-    const kpiRows = [
-      ['Sessies', 'sessions', fmtNum],
-      ['Gebruikers', 'users', fmtNum],
-      ['Paginaweergaven', 'pageviews', fmtNum],
-      ['Offerteaanvragen', 'offertes', fmtNum],
-      ['Bezoekers via Paid Ads', 'paidAds', fmtNum],
-      ['Bezoekers via Social', 'social', fmtNum],
-      ['Bezoekers via Search', 'search', fmtNum],
-      ['Bezoekers overig', 'overig', fmtNum],
-      ['Conversie totaal', 'conversionTotal', fmtPct],
-      ['Conversie betaalde bezoekers', 'conversionPaid', fmtPct],
-      ['Conversie socials', 'conversionSocial', fmtPct],
-    ].map(([label, key, fmt]) => [label, fmt(k[key].current), fmt(k[key].previous), changeCell(k[key].change)]);
-
-    heading('Kerncijfers');
-    table(
-      [
-        { label: 'Meting', width: width - 3 * 100 },
-        { label: 'Deze week', width: 100, align: 'right' },
-        { label: 'Vorige week', width: 100, align: 'right' },
-        { label: 'Verschil', width: 100, align: 'right' },
-      ],
-      kpiRows
-    );
-
-    // Daily sessions bar chart
+    // Daily sessions bar chart, inside a card
     heading('Sessies per dag');
     const days = data.dailySessions;
     const prevDays = data.dailySessionsPrev;
     const chartH = 110;
-    ensureSpace(chartH + 50);
-    const chartTop = doc.y + 6;
+    const cardH = chartH + 74;
+    ensureSpace(cardH);
+    const cardTop = doc.y;
+    doc.roundedRect(left, cardTop, width, cardH, 6).fill(TILE_BG);
+    const chartTop = cardTop + 30;
+    const innerLeft = left + 14;
+    const innerW = width - 28;
     const max = Math.max(1, ...days.map((d) => d.sessions), ...prevDays.map((d) => d.sessions));
-    const slot = width / days.length;
-    const barW = Math.min(18, slot / 2 - 3);
+    const slot = innerW / days.length;
+    const barW = Math.min(20, slot / 2 - 4);
     days.forEach((d, i) => {
-      const cx = left + slot * i + slot / 2;
+      const cx = innerLeft + slot * i + slot / 2;
       const h = (d.sessions / max) * chartH;
       const ph = ((prevDays[i] ? prevDays[i].sessions : 0) / max) * chartH;
-      doc.rect(cx - barW - 1, chartTop + chartH - ph, barW, ph).fill('#cfcfcf');
+      doc.rect(cx - barW - 1, chartTop + chartH - ph, barW, ph).fill('#d9d5cb');
       doc.rect(cx + 1, chartTop + chartH - h, barW, h).fill(GOLD);
-      doc.font('Helvetica').fontSize(8).fillColor(INK)
+      doc.font('Helvetica-Bold').fontSize(8).fillColor(INK)
         .text(String(d.sessions), cx - slot / 2, chartTop + chartH - h - 11, { width: slot, align: 'center', lineBreak: false });
-      doc.fillColor(MUTED).text(nlWeekday(d.date), cx - slot / 2, chartTop + chartH + 4, { width: slot, align: 'center', lineBreak: false });
+      doc.font('Helvetica').fillColor(MUTED)
+        .text(nlWeekday(d.date), cx - slot / 2, chartTop + chartH + 6, { width: slot, align: 'center', lineBreak: false });
     });
-    doc.y = chartTop + chartH + 20;
-    doc.rect(left, doc.y + 2, 8, 8).fill(GOLD);
-    doc.font('Helvetica').fontSize(8).fillColor(MUTED).text('Deze week', left + 12, doc.y, { lineBreak: false });
-    doc.rect(left + 80, doc.y + 2, 8, 8).fill('#cfcfcf');
-    doc.fillColor(MUTED).text('Vorige week', left + 92, doc.y, { lineBreak: false });
-    doc.y += 14;
+    const legendY = cardTop + cardH - 22;
+    doc.rect(innerLeft, legendY + 1, 8, 8).fill(GOLD);
+    doc.font('Helvetica').fontSize(8).fillColor(MUTED).text('Deze week', innerLeft + 12, legendY, { lineBreak: false });
+    doc.rect(innerLeft + 80, legendY + 1, 8, 8).fill('#d9d5cb');
+    doc.fillColor(MUTED).text('Vorige week', innerLeft + 92, legendY, { lineBreak: false });
+    doc.y = cardTop + cardH + GAP;
 
     // Channels + offerte tables
     const total = data.channels.reduce((s, c) => s + c.sessions, 0);
