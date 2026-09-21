@@ -129,14 +129,11 @@ function fallbackIntro(data, ranges) {
   );
 }
 
-// PDFKit's built-in fonts only cover Latin-1, so strip markdown and anything outside it.
+// Strip markdown, and characters the embedded fonts lack (emoji, CJK, ...).
 function cleanText(text) {
   return String(text)
     .replace(/[*_`#>]+/g, '')
-    .replace(/’|‘/g, "'")
-    .replace(/“|”/g, '"')
-    .replace(/[–—]/g, '-')
-    .replace(/[^\n\x20-\x7E -ÿ€]/g, '')
+    .replace(/[^\n\x20-\x7E\u00A0-\u024F\u2010-\u203A\u20AC]/g, '')
     .trim();
 }
 
@@ -180,6 +177,11 @@ function renderPdf(data, ranges, intro) {
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
+    const fontDir = path.join(__dirname, 'fonts');
+    doc.registerFont('Body', path.join(fontDir, 'DMSans-Regular.woff'));
+    doc.registerFont('BodyBold', path.join(fontDir, 'DMSans-Bold.woff'));
+    doc.registerFont('Heading', path.join(fontDir, 'CormorantGaramond-Bold.woff'));
+
     const left = doc.page.margins.left;
     const width = doc.page.width - left - doc.page.margins.right;
     const bottom = () => doc.page.height - doc.page.margins.bottom;
@@ -194,13 +196,13 @@ function renderPdf(data, ranges, intro) {
     const logoPath = path.join(__dirname, 'public', 'logo-print.png');
     if (fs.existsSync(logoPath)) doc.image(logoPath, left, 38, { height: LOGO_H });
     const textX = left + LOGO_W + LOGO_GAP;
-    doc.font('Helvetica-Bold').fontSize(22).fillColor(INK).text('White Vision', textX, 45, { lineBreak: false });
-    doc.font('Helvetica').fontSize(8).fillColor(GOLD)
+    doc.font('Heading').fontSize(28).fillColor(INK).text('White Vision', textX, 41, { lineBreak: false });
+    doc.font('Body').fontSize(8).fillColor(GOLD)
       .text('UNIEK. STIJLVOL. ONVERGETELIJK.', textX, 73, { characterSpacing: 1.5, lineBreak: false });
     doc.moveTo(left, 100).lineTo(left + width, 100).strokeColor(LINE).lineWidth(0.5).stroke();
 
-    doc.font('Helvetica-Bold').fontSize(16).fillColor(INK).text('Weekrapport Analytics', left, 118, { lineBreak: false });
-    doc.font('Helvetica').fontSize(9).fillColor(MUTED).text(
+    doc.font('Heading').fontSize(22).fillColor(INK).text('Weekrapport Analytics', left, 114, { lineBreak: false });
+    doc.font('Body').fontSize(9).fillColor(MUTED).text(
       'Periode: ' + nlDate(ranges.current.start, true) + ' t/m ' + nlDate(ranges.current.end, true) +
         ' (vorige week)  |  Vergeleken met de week ervoor',
       left, 142, { lineBreak: false }
@@ -210,13 +212,13 @@ function renderPdf(data, ranges, intro) {
     const heading = (text) => {
       ensureSpace(90);
       doc.moveDown(0.9);
-      doc.font('Helvetica-Bold').fontSize(12).fillColor(INK).text(text, left, doc.y);
+      doc.font('Heading').fontSize(15).fillColor(INK).text(text, left, doc.y);
       doc.moveDown(0.5);
     };
 
     // Intro
     intro.text.split(/\n{2,}|\n/).filter(Boolean).forEach((para) => {
-      doc.font('Helvetica').fontSize(10.5).fillColor(INK).text(para, left, doc.y, { width, lineGap: 3 });
+      doc.font('Body').fontSize(10.5).fillColor(INK).text(para, left, doc.y, { width, lineGap: 3 });
       doc.moveDown(0.6);
     });
 
@@ -235,18 +237,18 @@ function renderPdf(data, ranges, intro) {
           const x = left + j * (tileW + GAP);
           const color = item.change > 0 ? UP : item.change < 0 ? DOWN : MUTED;
           doc.roundedRect(x, y, tileW, TILE_H, 6).fill(TILE_BG);
-          doc.font('Helvetica').fontSize(7.5).fillColor(MUTED)
+          doc.font('Body').fontSize(7.5).fillColor(MUTED)
             .text(item.label.toUpperCase(), x + 10, y + 10, { width: tileW - 20, characterSpacing: 0.4, lineBreak: false });
-          doc.font('Helvetica-Bold').fontSize(18).fillColor(INK);
+          doc.font('BodyBold').fontSize(18).fillColor(INK);
           const value = item.fmt(item.current);
           const valueW = doc.widthOfString(value);
           doc.text(value, x + 10, y + 23, { lineBreak: false });
           const prev = '(' + item.fmt(item.previous) + ')';
-          doc.font('Helvetica').fontSize(9);
+          doc.font('Body').fontSize(9);
           if (10 + valueW + 5 + doc.widthOfString(prev) <= tileW - 8) {
             doc.fillColor(color).text(prev, x + 10 + valueW + 5, y + 30, { lineBreak: false });
           }
-          doc.font('Helvetica').fontSize(8).fillColor(color)
+          doc.font('Body').fontSize(8).fillColor(color)
             .text(fmtChange(item.change) + ' vs vorige week', x + 10, y + 50, { width: tileW - 20, lineBreak: false });
         });
         doc.y = y + TILE_H + GAP;
@@ -285,7 +287,7 @@ function renderPdf(data, ranges, intro) {
         ensureSpace(rowH);
         const y = doc.y;
         let x = left;
-        doc.font(header ? 'Helvetica-Bold' : 'Helvetica').fontSize(header ? 8 : 10);
+        doc.font(header ? 'BodyBold' : 'Body').fontSize(header ? 8 : 10);
         cells.forEach((cell, i) => {
           const col = columns[i];
           doc.fillColor(header ? MUTED : INK)
@@ -324,14 +326,14 @@ function renderPdf(data, ranges, intro) {
       const ph = ((prevDays[i] ? prevDays[i].sessions : 0) / max) * chartH;
       doc.rect(cx - barW - 1, chartTop + chartH - ph, barW, ph).fill('#d9d5cb');
       doc.rect(cx + 1, chartTop + chartH - h, barW, h).fill(GOLD);
-      doc.font('Helvetica-Bold').fontSize(8).fillColor(INK)
+      doc.font('BodyBold').fontSize(8).fillColor(INK)
         .text(String(d.sessions), cx - slot / 2, chartTop + chartH - h - 11, { width: slot, align: 'center', lineBreak: false });
-      doc.font('Helvetica').fillColor(MUTED)
+      doc.font('Body').fillColor(MUTED)
         .text(nlWeekday(d.date), cx - slot / 2, chartTop + chartH + 6, { width: slot, align: 'center', lineBreak: false });
     });
     const legendY = cardTop + cardH - 22;
     doc.rect(innerLeft, legendY + 1, 8, 8).fill(GOLD);
-    doc.font('Helvetica').fontSize(8).fillColor(MUTED).text('Deze week', innerLeft + 12, legendY, { lineBreak: false });
+    doc.font('Body').fontSize(8).fillColor(MUTED).text('Deze week', innerLeft + 12, legendY, { lineBreak: false });
     doc.rect(innerLeft + 80, legendY + 1, 8, 8).fill('#d9d5cb');
     doc.fillColor(MUTED).text('Vorige week', innerLeft + 92, legendY, { lineBreak: false });
     doc.y = cardTop + cardH + GAP;
@@ -362,7 +364,7 @@ function renderPdf(data, ranges, intro) {
     // Footer note
     doc.moveDown(1.5);
     ensureSpace(30);
-    doc.font('Helvetica').fontSize(8).fillColor(MUTED).text(
+    doc.font('Body').fontSize(8).fillColor(MUTED).text(
       'Bron: Google Analytics 4. ' + (intro.ai ? 'De inleiding is geschreven met behulp van AI.' : '') +
       ' Gegenereerd op ' + new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric', timeZone: TIMEZONE }) + '.',
       left, doc.y, { width }
@@ -423,4 +425,4 @@ function createWeeklyReport({ buildAnalytics, readGoogleAds, saveReport }) {
   return { generate, start };
 }
 
-module.exports = { createWeeklyReport, lastWeekRanges, amsterdamNow, mondayOf };
+module.exports = { createWeeklyReport, lastWeekRanges, amsterdamNow, mondayOf, shiftDate, cleanText, stripGreetings };

@@ -349,6 +349,124 @@
     document.querySelector('.last-updated').textContent = 'Laatst bijgewerkt: ' + time;
   }
 
+  // --- AI explanation above the widgets ---
+  // 7 days / this month: written automatically by the server. Other ranges: on-demand button.
+  var AUTO_EXPLAIN_RANGES = ['7', 'month'];
+  var explainSeq = 0;
+  var explainCooldownTimer = null;
+
+  function explainQuery() {
+    var q = '?range=' + currentRange + '&compare=' + currentCompare;
+    if (currentRange === 'custom' && currentCustomRange) {
+      q += '&start=' + currentCustomRange.start + '&end=' + currentCustomRange.end;
+    }
+    return q;
+  }
+
+  function formatClock(iso) {
+    return new Date(iso).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function setExplain(opts) {
+    var box = document.getElementById('aiExplain');
+    var textEl = document.getElementById('aiExplainText');
+    box.hidden = !opts;
+    if (!opts) return;
+    textEl.textContent = opts.text || '';
+    textEl.classList.toggle('is-loading', Boolean(opts.loading));
+    document.getElementById('aiExplainMeta').textContent = opts.meta || '';
+    document.getElementById('aiExplainActions').hidden = !opts.button;
+    if (opts.button) {
+      var btn = document.getElementById('aiExplainBtn');
+      btn.disabled = Boolean(opts.button.disabled);
+      btn.textContent = opts.button.label;
+      document.getElementById('aiExplainHint').textContent = opts.button.hint || '';
+    }
+  }
+
+  function manualButtonState(cooldownUntil) {
+    if (explainCooldownTimer) clearTimeout(explainCooldownTimer);
+    explainCooldownTimer = null;
+
+    if (!cooldownUntil) {
+      return { label: 'Verklaring vragen', hint: 'Kan 1x per 3 uur worden gebruikt.' };
+    }
+    var wait = new Date(cooldownUntil).getTime() - Date.now();
+    if (wait > 0) {
+      explainCooldownTimer = setTimeout(loadExplanation, Math.min(wait + 1000, 2147483000));
+    }
+    return { label: 'Verklaring vragen', disabled: true, hint: 'Weer beschikbaar om ' + formatClock(cooldownUntil) + '.' };
+  }
+
+  async function loadExplanation() {
+    if (document.getElementById('dashboardView').hidden) return;
+    var seq = ++explainSeq;
+    if (explainCooldownTimer) clearTimeout(explainCooldownTimer);
+
+    if (AUTO_EXPLAIN_RANGES.indexOf(currentRange) !== -1) {
+      setExplain({ text: 'De verklaring wordt geschreven…', loading: true });
+    } else {
+      setExplain(null);
+    }
+
+    try {
+      var res = await apiFetch('/api/ai/explanation' + explainQuery(), { headers: { Accept: 'application/json' } });
+      if (seq !== explainSeq) return;
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      var data = await res.json();
+      if (seq !== explainSeq) return;
+
+      if (data.mode === 'unavailable') {
+        setExplain(null);
+      } else if (data.mode === 'auto') {
+        setExplain(data.error
+          ? { text: data.error, loading: true }
+          : { text: data.text, meta: 'Geschreven om ' + formatClock(data.generatedAt) + ' · ververst om 12:00 en 18:00' });
+      } else {
+        setExplain({
+          text: data.text,
+          meta: data.text && data.generatedAt ? 'Geschreven om ' + formatClock(data.generatedAt) : '',
+          button: manualButtonState(data.cooldownUntil),
+        });
+      }
+    } catch (err) {
+      console.error('Explanation load error:', err);
+      if (seq === explainSeq) setExplain(null);
+    }
+  }
+
+  document.getElementById('aiExplainBtn').addEventListener('click', async function () {
+    var seq = ++explainSeq;
+    var btn = this;
+    btn.disabled = true;
+    document.getElementById('aiExplainHint').textContent = 'De verklaring wordt geschreven…';
+
+    try {
+      var res = await apiFetch('/api/ai/explanation' + explainQuery(), { method: 'POST' });
+      var data = await res.json();
+      if (seq !== explainSeq) return;
+
+      if (res.status === 429) {
+        setExplain({
+          text: document.getElementById('aiExplainText').textContent,
+          button: manualButtonState(data.cooldownUntil),
+        });
+        return;
+      }
+      if (!res.ok) throw new Error(data.error || 'Verklaring maken mislukt');
+
+      setExplain({
+        text: data.text,
+        meta: 'Geschreven om ' + formatClock(data.generatedAt),
+        button: manualButtonState(data.cooldownUntil),
+      });
+    } catch (err) {
+      if (seq !== explainSeq) return;
+      btn.disabled = false;
+      document.getElementById('aiExplainHint').textContent = err.message;
+    }
+  });
+
   // --- Main load ---
   async function load(range, compare, customRange) {
     currentRange = range;
@@ -368,6 +486,7 @@
       renderDonutChart(data);
       renderTable(data);
       updateLastRefreshed();
+      loadExplanation();
     } catch (err) {
       console.error('Load error:', err);
       var errorRow = '<tr><td colspan="2" class="empty-row">Fout bij laden van gegevens</td></tr>';
@@ -536,6 +655,7 @@
       document.getElementById('googleadsView').hidden = tab !== 'googleads';
       document.getElementById('reportsView').hidden = tab !== 'reports';
       document.getElementById('aiView').hidden = tab !== 'ai';
+      if (tab === 'dashboard') loadExplanation();
 
       if (tab === 'ai' && !aiLoaded) {
         aiLoaded = true;
@@ -596,7 +716,8 @@
         .map(function (r) {
           return '<tr><td>' + escapeHtml(r.originalName) + '</td><td>' + formatReportDate(r.uploadedAt) +
             '</td><td class="th-right">' + formatFileSize(r.size) +
-            '</td><td class="th-right"><button type="button" class="reports-download-link" data-id="' + escapeHtml(r.id) +
+            '</td><td class="th-right"><button type="button" class="reports-download-link" data-view-id="' + escapeHtml(r.id) +
+            '">Bekijken</button> <button type="button" class="reports-download-link" data-id="' + escapeHtml(r.id) +
             '" data-name="' + escapeHtml(r.originalName) + '">Download</button>' +
             (isAdmin ? ' <button type="button" class="reports-download-link reports-delete-link" data-delete-id="' + escapeHtml(r.id) +
               '" data-name="' + escapeHtml(r.originalName) + '">Verwijderen</button>' : '') + '</td></tr>';
@@ -609,6 +730,33 @@
   }
 
   document.getElementById('reportsTableBody').addEventListener('click', async function (e) {
+    var viewBtn = e.target.closest('button[data-view-id]');
+    if (viewBtn) {
+      // The PDF needs the Authorization header, so a plain link won't work: fetch it and
+      // open the blob in a new tab. The tab is opened synchronously to avoid popup blockers.
+      var tab = window.open('', '_blank');
+      var viewText = viewBtn.textContent;
+      viewBtn.disabled = true;
+      viewBtn.textContent = 'Bezig…';
+      try {
+        var viewRes = await apiFetch('/api/reports/' + encodeURIComponent(viewBtn.dataset.viewId));
+        if (!viewRes.ok) throw new Error('HTTP ' + viewRes.status);
+        var pdfBlob = new Blob([await viewRes.blob()], { type: 'application/pdf' });
+        var pdfUrl = URL.createObjectURL(pdfBlob);
+        if (tab) tab.location.href = pdfUrl;
+        else window.location.href = pdfUrl;
+        setTimeout(function () { URL.revokeObjectURL(pdfUrl); }, 5 * 60 * 1000);
+        viewBtn.textContent = viewText;
+      } catch (err) {
+        console.error('View error:', err);
+        if (tab) tab.close();
+        viewBtn.textContent = 'Mislukt';
+        setTimeout(function () { viewBtn.textContent = viewText; }, 2000);
+      }
+      viewBtn.disabled = false;
+      return;
+    }
+
     var delBtn = e.target.closest('button[data-delete-id]');
     if (delBtn) {
       if (!confirm('Rapport "' + delBtn.dataset.name + '" definitief verwijderen?')) return;

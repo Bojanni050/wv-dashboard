@@ -8,6 +8,7 @@ const multer = require('multer');
 const { BetaAnalyticsDataClient } = require('@google-analytics/data');
 const ai = require('./ai');
 const { createWeeklyReport } = require('./weekly-report');
+const { createExplainer, isConfigured: isAiConfigured, AUTO_RANGES: AI_AUTO_RANGES } = require('./explain');
 
 const app = express();
 app.use(express.json());
@@ -687,6 +688,53 @@ app.post('/api/ai/weekly-report', basicAuth, requireAdmin, async (req, res) => {
   } catch (err) {
     console.error('Manual weekly report failed:', err.message);
     res.status(500).json({ error: 'Weekrapport maken mislukt: ' + err.message });
+  }
+});
+
+// --- AI explanation above the dashboard widgets ---
+// 7 days / this month: generated automatically (at most once per 12:00 / 18:00 slot,
+// and only when someone views it). Other ranges: on-demand button, once per 3 hours.
+
+const explainer = createExplainer({ buildAnalytics });
+
+function resolveView(query) {
+  const { rangeParam, customStart, customEnd } = resolveRangeParam(query);
+  const compare = VALID_COMPARE.includes(query.compare) ? query.compare : 'previous';
+  const ranges = getRanges(rangeParam, compare, customStart, customEnd);
+  const viewKey = [rangeParam, compare, ranges.current.start, ranges.current.end].join('|');
+  return { rangeParam, compare, ranges, viewKey };
+}
+
+app.get('/api/ai/explanation', basicAuth, async (req, res) => {
+  if (!isAiConfigured()) return res.json({ mode: 'unavailable' });
+
+  const { rangeParam, compare, ranges, viewKey } = resolveView(req.query);
+
+  if (!AI_AUTO_RANGES.includes(rangeParam)) {
+    return res.json(Object.assign({ mode: 'manual' }, explainer.manualStatus(viewKey)));
+  }
+
+  try {
+    res.json(Object.assign({ mode: 'auto' }, await explainer.auto(ranges, rangeParam, compare)));
+  } catch (err) {
+    res.json({ mode: 'auto', error: 'De verklaring is tijdelijk niet beschikbaar.' });
+  }
+});
+
+app.post('/api/ai/explanation', basicAuth, async (req, res) => {
+  if (!isAiConfigured()) return res.status(400).json({ error: 'AI is nog niet ingesteld.' });
+
+  const { rangeParam, compare, ranges, viewKey } = resolveView(req.query);
+  if (AI_AUTO_RANGES.includes(rangeParam)) {
+    return res.status(400).json({ error: 'Voor deze periode wordt de verklaring automatisch gemaakt.' });
+  }
+
+  try {
+    res.json(Object.assign({ mode: 'manual' }, await explainer.manual(ranges, rangeParam, compare, viewKey)));
+  } catch (err) {
+    if (err.code === 'COOLDOWN') return res.status(429).json({ error: err.message, cooldownUntil: err.cooldownUntil });
+    console.error('Manual explanation failed:', err.message);
+    res.status(500).json({ error: 'Verklaring maken mislukt. Probeer het later opnieuw.' });
   }
 });
 

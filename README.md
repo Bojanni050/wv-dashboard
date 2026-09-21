@@ -37,3 +37,15 @@ van de vorige week (ma–zo, vergeleken met de week ervoor) met een door de AI
 geschreven, verklarende inleiding. Het rapport verschijnt in de tab
 **Rapporten**. Lukt de AI niet, dan wordt een standaardinleiding gebruikt.
 Met "Weekrapport nu maken" kan admin het handmatig testen.
+
+## AI-verklaring op het Dashboard
+
+Boven de widgets staat een korte, door AI geschreven verklaring van de cijfers.
+
+- **7 dagen** en **Deze maand**: de tekst wordt automatisch gemaakt, maar alleen
+  op het moment dat iemand de tab bekijkt. Daarna blijft de tekst staan tot het
+  volgende moment van 12:00 of 18:00 (Amsterdamse tijd).
+- **Overige perioden** (vandaag, gisteren, 90 dagen, aangepast): een knop
+  "Verklaring vragen". Die kan voor de hele site maar 1x per 3 uur worden gebruikt.
+
+De teksten worden bewaard in `data/ai-explanations.json`.
