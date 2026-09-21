@@ -367,10 +367,26 @@
     return new Date(iso).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
   }
 
+  // BoBot flips up into view: the watch-checking version while the AI is writing,
+  // the pointing version once the text is there. state: 'waiting' | 'ready' | null
+  function setAvatar(state, replay) {
+    var box = document.getElementById('aiExplain');
+    var current = box.classList.contains('is-ready') ? 'ready' : box.classList.contains('is-waiting') ? 'waiting' : null;
+    if (current === state && !replay) return;
+    box.classList.remove('is-ready', 'is-waiting');
+    void box.offsetWidth; // restart the CSS animation
+    if (state) box.classList.add('is-' + state);
+  }
+
   function setExplain(opts) {
     var box = document.getElementById('aiExplain');
     var textEl = document.getElementById('aiExplainText');
+    var previousText = textEl.textContent;
     box.hidden = !opts;
+
+    var state = !opts ? null : opts.waiting ? 'waiting' : !opts.loading && opts.text ? 'ready' : null;
+    setAvatar(state, state === 'ready' && previousText !== opts.text);
+
     if (!opts) return;
     textEl.textContent = opts.text || '';
     textEl.classList.toggle('is-loading', Boolean(opts.loading));
@@ -404,7 +420,7 @@
     if (explainCooldownTimer) clearTimeout(explainCooldownTimer);
 
     if (AUTO_EXPLAIN_RANGES.indexOf(currentRange) !== -1) {
-      setExplain({ text: 'De verklaring wordt geschreven…', loading: true });
+      setExplain({ text: 'De verklaring wordt geschreven…', loading: true, waiting: true });
     } else {
       setExplain(null);
     }
@@ -440,6 +456,7 @@
     var btn = this;
     btn.disabled = true;
     document.getElementById('aiExplainHint').textContent = 'De verklaring wordt geschreven…';
+    setAvatar('waiting');
 
     try {
       var res = await apiFetch('/api/ai/explanation' + explainQuery(), { method: 'POST' });
@@ -464,6 +481,7 @@
       if (seq !== explainSeq) return;
       btn.disabled = false;
       document.getElementById('aiExplainHint').textContent = err.message;
+      setAvatar(document.getElementById('aiExplainText').textContent ? 'ready' : null);
     }
   });
 
