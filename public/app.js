@@ -524,6 +524,7 @@
   // --- Tabs ---
   var reportsLoaded = false;
   var googleAdsLoaded = false;
+  var aiLoaded = false;
 
   document.querySelectorAll('.tab-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {
@@ -534,7 +535,12 @@
       document.getElementById('dashboardView').hidden = tab !== 'dashboard';
       document.getElementById('googleadsView').hidden = tab !== 'googleads';
       document.getElementById('reportsView').hidden = tab !== 'reports';
+      document.getElementById('aiView').hidden = tab !== 'ai';
 
+      if (tab === 'ai' && !aiLoaded) {
+        aiLoaded = true;
+        loadAiSettings();
+      }
       if (tab === 'reports' && !reportsLoaded) {
         reportsLoaded = true;
         loadReports();
@@ -567,6 +573,7 @@
       isAdmin = data.role === 'admin';
       document.getElementById('reportsUploadSection').hidden = !isAdmin;
       document.getElementById('googleAdsEditSection').hidden = !isAdmin;
+      document.getElementById('aiTabBtn').hidden = !isAdmin;
     } catch (err) {
       console.error('Role fetch error:', err);
     }
@@ -725,6 +732,163 @@
       loadGoogleAds();
     } catch (err) {
       setGoogleAdsStatus(err.message, true);
+    }
+  });
+
+  // --- AI settings (admin) ---
+  var aiState = null; // { activeProvider, weeklyReportEnabled, providers, providerMeta }
+  // Unsaved edits per provider, so switching provider in the dropdown doesn't lose them
+  var aiDraft = {};
+  var aiShownProvider = null;
+
+  function setAiStatus(message, isError) {
+    var el = document.getElementById('aiStatus');
+    el.textContent = message;
+    el.hidden = !message;
+    el.classList.toggle('error', Boolean(isError));
+    el.classList.toggle('success', !isError);
+  }
+
+  function setAiModelOptions(models, selected) {
+    var select = document.getElementById('aiModel');
+    var ids = models.map(function (m) { return m.id; });
+    if (selected && ids.indexOf(selected) === -1) models = [{ id: selected, name: selected }].concat(models);
+    select.innerHTML = models.length
+      ? models.map(function (m) {
+          return '<option value="' + escapeHtml(m.id) + '">' + escapeHtml(m.name === m.id ? m.id : m.name + ' (' + m.id + ')') + '</option>';
+        }).join('')
+      : '<option value="">Nog geen model — haal modellen op</option>';
+    select.value = selected || (models[0] ? models[0].id : '');
+  }
+
+  function saveAiDraft() {
+    if (!aiShownProvider) return;
+    var select = document.getElementById('aiModel');
+    aiDraft[aiShownProvider] = {
+      baseUrl: document.getElementById('aiBaseUrl').value,
+      apiKey: document.getElementById('aiApiKey').value,
+      model: select.value,
+      models: Array.prototype.map.call(select.options, function (o) {
+        return { id: o.value, name: o.textContent };
+      }).filter(function (m) { return m.id; }),
+    };
+  }
+
+  function showAiProvider(key) {
+    var saved = aiState.providers[key];
+    var d = aiDraft[key] || {};
+    aiShownProvider = key;
+    document.getElementById('aiBaseUrl').value = d.baseUrl !== undefined ? d.baseUrl : saved.baseUrl;
+    var keyInput = document.getElementById('aiApiKey');
+    keyInput.value = d.apiKey || '';
+    keyInput.placeholder = saved.hasKey ? 'Opgeslagen — laat leeg om te behouden' : 'Plak hier je API-key';
+    setAiModelOptions(d.models || [], d.model !== undefined ? d.model : saved.model);
+  }
+
+  async function loadAiSettings() {
+    try {
+      var res = await apiFetch('/api/ai/settings', { headers: { Accept: 'application/json' } });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      aiState = await res.json();
+      aiDraft = {};
+
+      var select = document.getElementById('aiProvider');
+      select.innerHTML = Object.keys(aiState.providerMeta).map(function (key) {
+        return '<option value="' + key + '">' + escapeHtml(aiState.providerMeta[key].label) + '</option>';
+      }).join('');
+      select.value = aiState.activeProvider;
+      document.getElementById('aiWeeklyEnabled').checked = aiState.weeklyReportEnabled;
+      showAiProvider(aiState.activeProvider);
+    } catch (err) {
+      console.error('AI settings load error:', err);
+      aiLoaded = false;
+      setAiStatus('Instellingen laden mislukt.', true);
+    }
+  }
+
+  document.getElementById('aiProvider').addEventListener('change', function () {
+    saveAiDraft();
+    showAiProvider(this.value);
+    setAiStatus('', false);
+  });
+
+  document.getElementById('aiFetchModels').addEventListener('click', async function () {
+    var btn = this;
+    btn.disabled = true;
+    setAiStatus('Modellen ophalen…', false);
+    try {
+      var res = await apiFetch('/api/ai/models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: document.getElementById('aiProvider').value,
+          baseUrl: document.getElementById('aiBaseUrl').value,
+          apiKey: document.getElementById('aiApiKey').value,
+        }),
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Modellen ophalen mislukt');
+      setAiModelOptions(data.models, document.getElementById('aiModel').value);
+      setAiStatus(data.models.length + ' modellen gevonden. Kies een model en sla op.', false);
+    } catch (err) {
+      setAiStatus(err.message, true);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('aiForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    saveAiDraft();
+
+    var providers = {};
+    Object.keys(aiDraft).forEach(function (key) {
+      providers[key] = { baseUrl: aiDraft[key].baseUrl, apiKey: aiDraft[key].apiKey, model: aiDraft[key].model };
+    });
+
+    setAiStatus('Opslaan…', false);
+    try {
+      var res = await apiFetch('/api/ai/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          activeProvider: document.getElementById('aiProvider').value,
+          weeklyReportEnabled: document.getElementById('aiWeeklyEnabled').checked,
+          providers: providers,
+        }),
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Opslaan mislukt');
+
+      // Typed keys are now stored server-side; keep fetched model lists and selections
+      Object.keys(aiDraft).forEach(function (key) { aiDraft[key].apiKey = ''; });
+      aiState = data;
+      showAiProvider(document.getElementById('aiProvider').value);
+      setAiStatus('Opgeslagen.', false);
+    } catch (err) {
+      setAiStatus(err.message, true);
+    }
+  });
+
+  document.getElementById('aiRunReport').addEventListener('click', async function () {
+    var btn = this;
+    btn.disabled = true;
+    setAiStatus('Weekrapport wordt gemaakt (dit kan een halve minuut duren)…', false);
+    try {
+      var res = await apiFetch('/api/ai/weekly-report', { method: 'POST' });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Weekrapport maken mislukt');
+      setAiStatus(
+        '"' + data.entry.originalName + '" is toegevoegd aan Rapporten.' +
+          (data.aiUsed ? '' : ' Let op: AI-inleiding mislukt (' + data.aiError + '), standaardtekst gebruikt.'),
+        !data.aiUsed
+      );
+      reportsLoaded = true;
+      loadReports();
+    } catch (err) {
+      setAiStatus(err.message, true);
+    } finally {
+      btn.disabled = false;
     }
   });
 

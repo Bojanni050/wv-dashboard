@@ -120,7 +120,19 @@ body.is-locked .dashboard {
   font-size: 14px;
 }
 
-.login-field input:focus {
+.login-field select {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+
+.login-field input:focus,
+.login-field select:focus {
   outline: none;
   border-color: var(--gold);
 }
@@ -737,4 +749,49 @@ tbody tr:hover td {
     padding: 7px 12px;
     font-size: 12px;
   }
+}
+
+/* AI settings */
+.ai-form {
+  max-width: 560px;
+}
+
+.ai-model-row {
+  display: flex;
+  gap: 12px;
+}
+
+.ai-model-row select {
+  flex: 1;
+  min-width: 0;
+}
+
+.ai-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.ai-form button.ai-secondary {
+  background: transparent;
+  color: var(--gold);
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ai-form button.ai-secondary:hover {
+  background: rgba(200, 169, 107, 0.12);
+}
+
+.ai-form button:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }

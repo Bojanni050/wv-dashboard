@@ -71,6 +71,7 @@
       <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
       <button class="tab-btn" data-tab="googleads">Google Ads</button>
       <button class="tab-btn" data-tab="reports">Rapporten</button>
+      <button class="tab-btn" data-tab="ai" id="aiTabBtn" hidden>AI-instellingen</button>
     </nav>
 
     <!-- Dashboard tab -->
@@ -334,6 +335,45 @@
       </section>
     </div>
     <!-- /Reports tab -->
+
+    <!-- AI settings tab (admin only) -->
+    <div id="aiView" hidden>
+      <section class="table-card">
+        <h2 class="card-title">AI-instellingen</h2>
+        <p class="card-subtitle">Alleen zichtbaar voor Admin — de AI schrijft de verklarende inleiding van het weekrapport. API-keys worden alleen op de server bewaard.</p>
+        <form class="ai-form" id="aiForm">
+          <label class="login-field">
+            <span>Actieve provider</span>
+            <select id="aiProvider"></select>
+          </label>
+          <label class="login-field">
+            <span>Base URL</span>
+            <input type="url" id="aiBaseUrl" required />
+          </label>
+          <label class="login-field">
+            <span>API-key</span>
+            <input type="password" id="aiApiKey" autocomplete="off" />
+          </label>
+          <div class="login-field">
+            <span>Model</span>
+            <div class="ai-model-row">
+              <select id="aiModel"></select>
+              <button type="button" class="ai-secondary" id="aiFetchModels">Modellen ophalen</button>
+            </div>
+          </div>
+          <label class="ai-checkbox">
+            <input type="checkbox" id="aiWeeklyEnabled" />
+            Elke maandag automatisch een weekrapport (PDF) maken
+          </label>
+          <div class="reports-upload">
+            <button type="submit">Opslaan</button>
+            <button type="button" class="ai-secondary" id="aiRunReport">Weekrapport nu maken</button>
+          </div>
+        </form>
+        <p class="reports-upload-status" id="aiStatus" hidden></p>
+      </section>
+    </div>
+    <!-- /AI settings tab -->
 
     <!-- Footer -->
     <footer class="footer">

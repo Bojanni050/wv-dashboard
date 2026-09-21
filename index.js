@@ -6,6 +6,8 @@ const fs = require('fs');
 const crypto = require('crypto');
 const multer = require('multer');
 const { BetaAnalyticsDataClient } = require('@google-analytics/data');
+const ai = require('./ai');
+const { createWeeklyReport } = require('./weekly-report');
 
 const app = express();
 app.use(express.json());
@@ -342,126 +344,129 @@ async function fetchDailySessions(dateRange, days) {
 
 // --- Main endpoint ---
 
+async function buildAnalytics(ranges, rangeParam, compareParam) {
+  const [
+    currentMetrics,
+    previousMetrics,
+    channels,
+    previousChannels,
+    offerteByPage,
+    offerteByChannel,
+    previousOfferteByChannel,
+    offerteByCampaign,
+    dailySessions,
+    dailySessionsPrev,
+  ] = await Promise.all([
+    fetchMetricsForRange(ranges.current),
+    fetchMetricsForRange(ranges.previous),
+    fetchChannels(ranges.current),
+    fetchChannels(ranges.previous),
+    fetchOfferteByPage(ranges.current),
+    fetchOfferteByChannel(ranges.current),
+    fetchOfferteByChannel(ranges.previous),
+    fetchOfferteByCampaign(ranges.current),
+    fetchDailySessions(ranges.current, daysInRange(ranges.current)),
+    fetchDailySessions(ranges.previous, daysInRange(ranges.previous)),
+  ]);
+
+  const offerteCount = offerteByPage.reduce((sum, r) => sum + r.count, 0);
+
+  // Fetch previous period offerte count
+  const prevOfferte = await fetchOfferteByPage(ranges.previous);
+  const prevOfferteCount = prevOfferte.reduce((sum, r) => sum + r.count, 0);
+
+  const channelGroups = groupByChannel(channels, 'sessions');
+  const prevChannelGroups = groupByChannel(previousChannels, 'sessions');
+  const offerteChannelGroups = groupByChannel(offerteByChannel, 'count');
+  const prevOfferteChannelGroups = groupByChannel(previousOfferteByChannel, 'count');
+
+  const conversionTotal = conversionRate(offerteCount, currentMetrics.users);
+  const prevConversionTotal = conversionRate(prevOfferteCount, previousMetrics.users);
+
+  const conversionPaid = conversionRate(offerteChannelGroups.paidAds, channelGroups.paidAds);
+  const prevConversionPaid = conversionRate(prevOfferteChannelGroups.paidAds, prevChannelGroups.paidAds);
+
+  const conversionSocial = conversionRate(offerteChannelGroups.social, channelGroups.social);
+  const prevConversionSocial = conversionRate(prevOfferteChannelGroups.social, prevChannelGroups.social);
+
+  return {
+    range: rangeParam,
+    compare: compareParam,
+    periodStart: ranges.current.start,
+    periodEnd: ranges.current.end,
+    kpis: {
+      sessions: {
+        current: currentMetrics.sessions,
+        previous: previousMetrics.sessions,
+        change: pctChange(currentMetrics.sessions, previousMetrics.sessions),
+      },
+      users: {
+        current: currentMetrics.users,
+        previous: previousMetrics.users,
+        change: pctChange(currentMetrics.users, previousMetrics.users),
+      },
+      pageviews: {
+        current: currentMetrics.pageviews,
+        previous: previousMetrics.pageviews,
+        change: pctChange(currentMetrics.pageviews, previousMetrics.pageviews),
+      },
+      offertes: {
+        current: offerteCount,
+        previous: prevOfferteCount,
+        change: pctChange(offerteCount, prevOfferteCount),
+      },
+      paidAds: {
+        current: channelGroups.paidAds,
+        previous: prevChannelGroups.paidAds,
+        change: pctChange(channelGroups.paidAds, prevChannelGroups.paidAds),
+      },
+      social: {
+        current: channelGroups.social,
+        previous: prevChannelGroups.social,
+        change: pctChange(channelGroups.social, prevChannelGroups.social),
+      },
+      search: {
+        current: channelGroups.search,
+        previous: prevChannelGroups.search,
+        change: pctChange(channelGroups.search, prevChannelGroups.search),
+      },
+      overig: {
+        current: channelGroups.overig,
+        previous: prevChannelGroups.overig,
+        change: pctChange(channelGroups.overig, prevChannelGroups.overig),
+      },
+      conversionTotal: {
+        current: conversionTotal,
+        previous: prevConversionTotal,
+        change: pctChange(conversionTotal, prevConversionTotal),
+      },
+      conversionPaid: {
+        current: conversionPaid,
+        previous: prevConversionPaid,
+        change: pctChange(conversionPaid, prevConversionPaid),
+      },
+      conversionSocial: {
+        current: conversionSocial,
+        previous: prevConversionSocial,
+        change: pctChange(conversionSocial, prevConversionSocial),
+      },
+    },
+    channels,
+    offerteByPage,
+    offerteByChannel,
+    offerteByCampaign,
+    dailySessions,
+    dailySessionsPrev,
+  };
+}
+
 app.get('/api/analytics', basicAuth, async (req, res) => {
   const { rangeParam, customStart, customEnd } = resolveRangeParam(req.query);
   const compareParam = VALID_COMPARE.includes(req.query.compare) ? req.query.compare : 'previous';
 
   try {
     const ranges = getRanges(rangeParam, compareParam, customStart, customEnd);
-
-    const [
-      currentMetrics,
-      previousMetrics,
-      channels,
-      previousChannels,
-      offerteByPage,
-      offerteByChannel,
-      previousOfferteByChannel,
-      offerteByCampaign,
-      dailySessions,
-      dailySessionsPrev,
-    ] = await Promise.all([
-      fetchMetricsForRange(ranges.current),
-      fetchMetricsForRange(ranges.previous),
-      fetchChannels(ranges.current),
-      fetchChannels(ranges.previous),
-      fetchOfferteByPage(ranges.current),
-      fetchOfferteByChannel(ranges.current),
-      fetchOfferteByChannel(ranges.previous),
-      fetchOfferteByCampaign(ranges.current),
-      fetchDailySessions(ranges.current, daysInRange(ranges.current)),
-      fetchDailySessions(ranges.previous, daysInRange(ranges.previous)),
-    ]);
-
-    const offerteCount = offerteByPage.reduce((sum, r) => sum + r.count, 0);
-
-    // Fetch previous period offerte count
-    const prevOfferte = await fetchOfferteByPage(ranges.previous);
-    const prevOfferteCount = prevOfferte.reduce((sum, r) => sum + r.count, 0);
-
-    const channelGroups = groupByChannel(channels, 'sessions');
-    const prevChannelGroups = groupByChannel(previousChannels, 'sessions');
-    const offerteChannelGroups = groupByChannel(offerteByChannel, 'count');
-    const prevOfferteChannelGroups = groupByChannel(previousOfferteByChannel, 'count');
-
-    const conversionTotal = conversionRate(offerteCount, currentMetrics.users);
-    const prevConversionTotal = conversionRate(prevOfferteCount, previousMetrics.users);
-
-    const conversionPaid = conversionRate(offerteChannelGroups.paidAds, channelGroups.paidAds);
-    const prevConversionPaid = conversionRate(prevOfferteChannelGroups.paidAds, prevChannelGroups.paidAds);
-
-    const conversionSocial = conversionRate(offerteChannelGroups.social, channelGroups.social);
-    const prevConversionSocial = conversionRate(prevOfferteChannelGroups.social, prevChannelGroups.social);
-
-    res.json({
-      range: rangeParam,
-      compare: compareParam,
-      periodStart: ranges.current.start,
-      periodEnd: ranges.current.end,
-      kpis: {
-        sessions: {
-          current: currentMetrics.sessions,
-          previous: previousMetrics.sessions,
-          change: pctChange(currentMetrics.sessions, previousMetrics.sessions),
-        },
-        users: {
-          current: currentMetrics.users,
-          previous: previousMetrics.users,
-          change: pctChange(currentMetrics.users, previousMetrics.users),
-        },
-        pageviews: {
-          current: currentMetrics.pageviews,
-          previous: previousMetrics.pageviews,
-          change: pctChange(currentMetrics.pageviews, previousMetrics.pageviews),
-        },
-        offertes: {
-          current: offerteCount,
-          previous: prevOfferteCount,
-          change: pctChange(offerteCount, prevOfferteCount),
-        },
-        paidAds: {
-          current: channelGroups.paidAds,
-          previous: prevChannelGroups.paidAds,
-          change: pctChange(channelGroups.paidAds, prevChannelGroups.paidAds),
-        },
-        social: {
-          current: channelGroups.social,
-          previous: prevChannelGroups.social,
-          change: pctChange(channelGroups.social, prevChannelGroups.social),
-        },
-        search: {
-          current: channelGroups.search,
-          previous: prevChannelGroups.search,
-          change: pctChange(channelGroups.search, prevChannelGroups.search),
-        },
-        overig: {
-          current: channelGroups.overig,
-          previous: prevChannelGroups.overig,
-          change: pctChange(channelGroups.overig, prevChannelGroups.overig),
-        },
-        conversionTotal: {
-          current: conversionTotal,
-          previous: prevConversionTotal,
-          change: pctChange(conversionTotal, prevConversionTotal),
-        },
-        conversionPaid: {
-          current: conversionPaid,
-          previous: prevConversionPaid,
-          change: pctChange(conversionPaid, prevConversionPaid),
-        },
-        conversionSocial: {
-          current: conversionSocial,
-          previous: prevConversionSocial,
-          change: pctChange(conversionSocial, prevConversionSocial),
-        },
-      },
-      channels,
-      offerteByPage,
-      offerteByChannel,
-      offerteByCampaign,
-      dailySessions,
-      dailySessionsPrev,
-    });
+    res.json(await buildAnalytics(ranges, rangeParam, compareParam));
   } catch (err) {
     console.error('Analytics fetch error:', err.message);
     res.status(500).json({
@@ -496,6 +501,24 @@ function writeReportsIndex(list) {
   fs.writeFileSync(REPORTS_INDEX_FILE, JSON.stringify(list, null, 2));
 }
 
+function saveReport(buffer, originalName) {
+  const id = crypto.randomUUID();
+  ensureReportsDir();
+  fs.writeFileSync(path.join(REPORTS_DIR, id + '.pdf'), buffer);
+
+  const entry = {
+    id,
+    originalName,
+    size: buffer.length,
+    uploadedAt: new Date().toISOString(),
+  };
+
+  const list = readReportsIndex();
+  list.unshift(entry);
+  writeReportsIndex(list);
+  return entry;
+}
+
 const reportsUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 20 * 1024 * 1024 },
@@ -520,22 +543,7 @@ app.post('/api/reports', basicAuth, requireAdmin, (req, res) => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'Geen bestand ontvangen' });
 
-    const id = crypto.randomUUID();
-    ensureReportsDir();
-    fs.writeFileSync(path.join(REPORTS_DIR, id + '.pdf'), req.file.buffer);
-
-    const entry = {
-      id,
-      originalName: req.file.originalname,
-      size: req.file.size,
-      uploadedAt: new Date().toISOString(),
-    };
-
-    const list = readReportsIndex();
-    list.unshift(entry);
-    writeReportsIndex(list);
-
-    res.status(201).json(entry);
+    res.status(201).json(saveReport(req.file.buffer, req.file.originalname));
   });
 });
 
@@ -599,10 +607,78 @@ app.put('/api/google-ads', basicAuth, requireAdmin, (req, res) => {
   res.json(entry);
 });
 
+// --- AI settings + weekly report (admin only) ---
+
+app.get('/api/ai/settings', basicAuth, requireAdmin, (req, res) => {
+  res.json(ai.publicSettings(ai.readSettings()));
+});
+
+app.put('/api/ai/settings', basicAuth, requireAdmin, (req, res) => {
+  const body = req.body || {};
+  const settings = ai.readSettings();
+
+  if (!ai.PROVIDERS[body.activeProvider]) {
+    return res.status(400).json({ error: 'Onbekende provider' });
+  }
+
+  try {
+    Object.keys(ai.PROVIDERS).forEach((key) => {
+      const incoming = (body.providers || {})[key];
+      if (!incoming) return;
+      const current = settings.providers[key];
+      current.baseUrl = ai.normalizeBaseUrl(incoming.baseUrl || ai.PROVIDERS[key].defaultBaseUrl);
+      current.model = String(incoming.model || '').trim();
+      // Blank key = keep the stored one
+      if (typeof incoming.apiKey === 'string' && incoming.apiKey.trim()) current.apiKey = incoming.apiKey.trim();
+    });
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
+
+  settings.activeProvider = body.activeProvider;
+  settings.weeklyReportEnabled = Boolean(body.weeklyReportEnabled);
+  ai.writeSettings(settings);
+  res.json(ai.publicSettings(settings));
+});
+
+app.post('/api/ai/models', basicAuth, requireAdmin, async (req, res) => {
+  const { provider, baseUrl, apiKey } = req.body || {};
+  if (!ai.PROVIDERS[provider]) return res.status(400).json({ error: 'Onbekende provider' });
+
+  const stored = ai.readSettings().providers[provider];
+  try {
+    const models = await ai.listModels(
+      provider,
+      baseUrl || stored.baseUrl,
+      (typeof apiKey === 'string' && apiKey.trim()) || stored.apiKey
+    );
+    res.json({ models });
+  } catch (err) {
+    res.status(400).json({ error: 'Modellen ophalen mislukt: ' + err.message });
+  }
+});
+
+const weeklyReport = createWeeklyReport({
+  buildAnalytics,
+  readGoogleAds,
+  saveReport,
+});
+
+app.post('/api/ai/weekly-report', basicAuth, requireAdmin, async (req, res) => {
+  try {
+    const result = await weeklyReport.generate();
+    res.status(201).json(result);
+  } catch (err) {
+    console.error('Manual weekly report failed:', err.message);
+    res.status(500).json({ error: 'Weekrapport maken mislukt: ' + err.message });
+  }
+});
+
 // --- Serve static frontend ---
 app.use(express.static(path.join(__dirname, 'public')));
 
 // --- Start ---
 app.listen(PORT, () => {
   console.log(`White Vision Dashboard running on port ${PORT}`);
+  weeklyReport.start();
 });
