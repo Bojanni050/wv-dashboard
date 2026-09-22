@@ -692,8 +692,8 @@ app.post('/api/ai/weekly-report', basicAuth, requireAdmin, async (req, res) => {
 });
 
 // --- AI explanation above the dashboard widgets ---
-// 7 days / this month: generated automatically (at most once per 12:00 / 18:00 slot,
-// and only when someone views it). Other ranges: on-demand button, once per 3 hours.
+// 7 days / this month: generated automatically (at most once per 06:00 / 12:00 / 18:00
+// slot, and only when someone views it). Other ranges: on-demand button, once per 3 hours.
 
 const explainer = createExplainer({ buildAnalytics });
 

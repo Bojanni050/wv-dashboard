@@ -437,7 +437,7 @@
       } else if (data.mode === 'auto') {
         setExplain(data.error
           ? { text: data.error, loading: true }
-          : { text: data.text, meta: 'Geschreven om ' + formatClock(data.generatedAt) + ' · ververst om 12:00 en 18:00' });
+          : { text: data.text, meta: 'Geschreven om ' + formatClock(data.generatedAt) + ' · ververst om 06:00, 12:00 en 18:00' });
       } else {
         setExplain({
           text: data.text,

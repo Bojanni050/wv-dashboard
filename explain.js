@@ -5,8 +5,9 @@ const { amsterdamNow, shiftDate, cleanText, stripGreetings } = require('./weekly
 
 const STATE_FILE = path.join(__dirname, 'data', 'ai-explanations.json');
 
-// Ranges that get an automatic explanation, refreshed at 12:00 and 18:00 (Amsterdam)
-// when someone looks at them. All other ranges use the rate-limited button.
+// Ranges that get an automatic explanation, refreshed at 06:00, 12:00 and 18:00
+// (Amsterdam) when someone looks at them. All other ranges use the rate-limited
+// button.
 const AUTO_RANGES = ['7', 'month'];
 const MANUAL_COOLDOWN_MS = 3 * 60 * 60 * 1000;
 const FAILURE_BACKOFF_MS = 10 * 60 * 1000;
@@ -23,6 +24,13 @@ const SYSTEM_PROMPT =
   'Begin direct met de inhoud: geen aanhef en geen afsluitende groet. ' +
   'Schrijf 60 tot 120 woorden in 1 tot 2 alinea\'s, zonder kopjes, opsommingstekens, markdown of emoji.';
 
+// Appended to SYSTEM_PROMPT only by the automatic 06:00/12:00/18:00 generation on 22 September.
+const BIRTHDAY_PROMPT =
+  ' Vandaag is 22 september: de verjaardag van Bas, de eigenaar van White Vision. ' +
+  'Begin je toelichting daarom met één korte, warme felicitatie voor Bas, bijvoorbeeld: "Gefeliciteerd met je verjaardag, Bas!". ' +
+  'Schrijf geen aanhef zoals "Beste Bas" en plaats de felicitatie niet als losse afsluiter: ' +
+  'werk hem aan het begin van je eerste alinea en ga daarna gewoon verder met de uitleg van de cijfers.';
+
 function readState() {
   try {
     return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
@@ -36,13 +44,29 @@ function writeState(state) {
   fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
 }
 
-// Identifies the most recent 12:00 / 18:00 Amsterdam boundary. An explanation
-// generated in an earlier slot is stale.
+// Automatic refresh moments, in Amsterdam time.
+const SLOT_HOURS = [6, 12, 18];
+
+// Identifies the most recent 06:00 / 12:00 / 18:00 Amsterdam boundary. An
+// explanation generated in an earlier slot is stale.
 function currentSlotKey(now) {
   const local = amsterdamNow(now);
-  if (local.hour >= 18) return local.date + 'T18';
-  if (local.hour >= 12) return local.date + 'T12';
-  return shiftDate(local.date, -1) + 'T18';
+  for (let i = SLOT_HOURS.length - 1; i >= 0; i--) {
+    if (local.hour >= SLOT_HOURS[i]) return local.date + 'T' + String(SLOT_HOURS[i]).padStart(2, '0');
+  }
+  // Before the first slot of the day we are still in yesterday's last slot.
+  return shiftDate(local.date, -1) + 'T' + String(SLOT_HOURS[SLOT_HOURS.length - 1]).padStart(2, '0');
+}
+
+// Bas (eigenaar van White Vision) is jarig op 22 september. Alleen de
+// automatische 06:00/12:00/18:00-generatie van die dag feliciteert hem; de
+// handmatige knop en het weekrapport dus niet. Voor 06:00 hoort een
+// weergave nog bij het avondslot van de dag ervoor, dus dan ook niet.
+const BIRTHDAY_MONTH_DAY = '09-22';
+
+function birthdayGreetingDue(now) {
+  const local = amsterdamNow(now || new Date());
+  return local.hour >= SLOT_HOURS[0] && local.date.slice(5) === BIRTHDAY_MONTH_DAY;
 }
 
 function isConfigured() {
@@ -75,14 +99,24 @@ function promptData(data, ranges, rangeParam, compare) {
   };
 }
 
-async function generate(buildAnalytics, ranges, rangeParam, compare) {
+async function generate(buildAnalytics, ranges, rangeParam, compare, birthday) {
   const data = await buildAnalytics(ranges, rangeParam, compare);
+  const systemPrompt = birthday ? SYSTEM_PROMPT + BIRTHDAY_PROMPT : SYSTEM_PROMPT;
   const text = await ai.generateText(
     ai.readSettings(),
-    SYSTEM_PROMPT,
+    systemPrompt,
     'Cijfers als JSON:\n' + JSON.stringify(promptData(data, ranges, rangeParam, compare), null, 2)
   );
-  return stripGreetings(cleanText(text));
+  return ensureBirthdayGreeting(stripGreetings(cleanText(text)), birthday);
+}
+
+// The model occasionally ignores the felicitatie-instructie; then add one ourselves,
+// so the greeting is guaranteed. Also runs after stripGreetings, which can remove an
+// opening paragraph that happens to start with "Hallo"/"Beste".
+function ensureBirthdayGreeting(text, birthday) {
+  if (!birthday) return text;
+  if (/gefeliciteerd|gefeliciteer|verjaardag|\bjarig\b/i.test(text)) return text;
+  return 'Gefeliciteerd met je verjaardag, Bas! ' + text;
 }
 
 function createExplainer({ buildAnalytics }) {
@@ -91,7 +125,7 @@ function createExplainer({ buildAnalytics }) {
   let manualRunning = false;
 
   // Explanation for a 7-day / this-month view. Generated lazily the first time
-  // someone views it after a 12:00 / 18:00 boundary, then served from cache.
+  // someone views it after a 06:00 / 12:00 / 18:00 boundary, then served from cache.
   async function auto(ranges, rangeParam, compare, now) {
     now = now || new Date();
     const key = rangeParam + ':' + compare;
@@ -107,9 +141,10 @@ function createExplainer({ buildAnalytics }) {
       throw new Error(recentFailure.message);
     }
 
+    const birthday = birthdayGreetingDue(now);
     const promise = (async () => {
       try {
-        const text = await generate(buildAnalytics, ranges, rangeParam, compare);
+        const text = await generate(buildAnalytics, ranges, rangeParam, compare, birthday);
         const fresh = { slotKey, text, generatedAt: new Date().toISOString() };
         const state = readState();
         state.auto = Object.assign(state.auto || {}, { [key]: fresh });
@@ -173,4 +208,4 @@ function createExplainer({ buildAnalytics }) {
   return { auto, manual, manualStatus };
 }
 
-module.exports = { createExplainer, isConfigured, AUTO_RANGES, currentSlotKey };
+module.exports = { createExplainer, isConfigured, AUTO_RANGES, currentSlotKey, birthdayGreetingDue };
