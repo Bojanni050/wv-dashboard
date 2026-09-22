@@ -24,7 +24,8 @@ const SYSTEM_PROMPT =
   'Begin direct met de inhoud: geen aanhef en geen afsluitende groet. ' +
   'Schrijf 60 tot 120 woorden in 1 tot 2 alinea\'s, zonder kopjes, opsommingstekens, markdown of emoji.';
 
-// Appended to SYSTEM_PROMPT only by the automatic 06:00/12:00/18:00 generation on 22 September.
+// Appended to SYSTEM_PROMPT on 22 September: by the automatic 06:00/12:00/18:00
+// generations, and by the first manual generation of that day.
 const BIRTHDAY_PROMPT =
   ' Vandaag is 22 september: de verjaardag van Bas, de eigenaar van White Vision. ' +
   'Begin je toelichting daarom met één korte, warme felicitatie voor Bas, bijvoorbeeld: "Gefeliciteerd met je verjaardag, Bas!". ' +
@@ -58,11 +59,17 @@ function currentSlotKey(now) {
   return shiftDate(local.date, -1) + 'T' + String(SLOT_HOURS[SLOT_HOURS.length - 1]).padStart(2, '0');
 }
 
-// Bas (eigenaar van White Vision) is jarig op 22 september. Alleen de
-// automatische 06:00/12:00/18:00-generatie van die dag feliciteert hem; de
-// handmatige knop en het weekrapport dus niet. Voor 06:00 hoort een
-// weergave nog bij het avondslot van de dag ervoor, dus dan ook niet.
+// Bas (eigenaar van White Vision) is jarig op 22 september. De automatische
+// 06:00/12:00/18:00-generatie feliciteert hem de hele dag; de handmatige knop
+// alleen bij de eerste geslaagde generatie van die dag; het weekrapport dus niet.
+// Vóór 06:00 hoort een weergave nog bij het avondslot van de dag ervoor, dus dan
+// feliciteert alleen de automatische route nog niet (handmatig mag elke tijd).
 const BIRTHDAY_MONTH_DAY = '09-22';
+
+// True when it is 22 September (Bas' birthday) in Amsterdam, any hour.
+function isBirthdayDate(now) {
+  return amsterdamNow(now || new Date()).date.slice(5) === BIRTHDAY_MONTH_DAY;
+}
 
 function birthdayGreetingDue(now) {
   const local = amsterdamNow(now || new Date());
@@ -190,10 +197,17 @@ function createExplainer({ buildAnalytics }) {
 
     manualRunning = true;
     try {
-      const text = await generate(buildAnalytics, ranges, rangeParam, compare);
+      // Op 22 september feliciteert de knop Bas bij de eerste geslaagde
+      // generatie van die dag (state.onthoudt 'birthdayGreetedOn'); latere
+      // handmatige generaties die dag schrijven de tekst gewoon normaal.
+      const today = amsterdamNow(now).date;
+      const greet = isBirthdayDate(now) && (readState().manual || {}).birthdayGreetedOn !== today;
+
+      const text = await generate(buildAnalytics, ranges, rangeParam, compare, greet);
       const lastUsedAt = new Date().toISOString();
       const state = readState();
-      state.manual = { lastUsedAt, viewKey, text };
+      state.manual = Object.assign({}, state.manual, { lastUsedAt, viewKey, text });
+      if (greet) state.manual.birthdayGreetedOn = today;
       writeState(state);
       return {
         text,
@@ -208,4 +222,4 @@ function createExplainer({ buildAnalytics }) {
   return { auto, manual, manualStatus };
 }
 
-module.exports = { createExplainer, isConfigured, AUTO_RANGES, currentSlotKey, birthdayGreetingDue };
+module.exports = { createExplainer, isConfigured, AUTO_RANGES, currentSlotKey, birthdayGreetingDue, isBirthdayDate };
