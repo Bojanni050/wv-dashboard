@@ -984,6 +984,9 @@
       }).join('');
       select.value = aiState.activeProvider;
       document.getElementById('aiWeeklyEnabled').checked = aiState.weeklyReportEnabled;
+      document.getElementById('aiMonthlyEnabled').checked = aiState.monthlyReportEnabled;
+      document.getElementById('aiWeeklyActionsEnabled').checked = aiState.weeklyActionsEnabled;
+      document.getElementById('aiMonthlyActionsEnabled').checked = aiState.monthlyActionsEnabled;
       showAiProvider(aiState.activeProvider);
     } catch (err) {
       console.error('AI settings load error:', err);
@@ -1040,6 +1043,9 @@
         body: JSON.stringify({
           activeProvider: document.getElementById('aiProvider').value,
           weeklyReportEnabled: document.getElementById('aiWeeklyEnabled').checked,
+          monthlyReportEnabled: document.getElementById('aiMonthlyEnabled').checked,
+          weeklyActionsEnabled: document.getElementById('aiWeeklyActionsEnabled').checked,
+          monthlyActionsEnabled: document.getElementById('aiMonthlyActionsEnabled').checked,
           providers: providers,
         }),
       });
@@ -1055,6 +1061,86 @@
       setAiStatus(err.message, true);
     }
   });
+
+  document.getElementById('aiRunMonthlyReport').addEventListener('click', async function () {
+    var btn = this;
+    btn.disabled = true;
+    setAiStatus('Maandrapport wordt gemaakt (dit kan een halve minuut duren)…', false);
+    try {
+      var res = await apiFetch('/api/ai/monthly-report', { method: 'POST' });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Maandrapport maken mislukt');
+      setAiStatus(
+        '"' + data.entry.originalName + '" is toegevoegd aan Rapporten.' +
+          (data.aiUsed ? '' : ' Let op: AI-inleiding mislukt (' + data.aiError + '), standaardtekst gebruikt.'),
+        !data.aiUsed
+      );
+      reportsLoaded = true;
+      loadReports();
+    } catch (err) {
+      setAiStatus(err.message, true);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  function setAiActionsStatus(message, isError) {
+    var el = document.getElementById('aiActionsStatus');
+    el.textContent = message;
+    el.hidden = !message;
+    el.classList.toggle('error', Boolean(isError));
+    el.classList.toggle('success', !isError);
+  }
+
+  document.getElementById('aiActionsForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    if (!aiState) return;
+    setAiActionsStatus('Opslaan…', false);
+    try {
+      var res = await apiFetch('/api/ai/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          activeProvider: aiState.activeProvider,
+          weeklyReportEnabled: document.getElementById('aiWeeklyEnabled').checked,
+          monthlyReportEnabled: document.getElementById('aiMonthlyEnabled').checked,
+          weeklyActionsEnabled: document.getElementById('aiWeeklyActionsEnabled').checked,
+          monthlyActionsEnabled: document.getElementById('aiMonthlyActionsEnabled').checked,
+          providers: {},
+        }),
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Opslaan mislukt');
+      aiState = data;
+      setAiActionsStatus('Opgeslagen.', false);
+    } catch (err) {
+      setAiActionsStatus(err.message, true);
+    }
+  });
+
+  function runActionsMail(buttonId, endpoint, label) {
+    document.getElementById(buttonId).addEventListener('click', async function () {
+      var btn = this;
+      btn.disabled = true;
+      setAiActionsStatus(label + ' worden gemaild…', false);
+      try {
+        var res = await apiFetch(endpoint, { method: 'POST' });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Mailen mislukt');
+        setAiActionsStatus(
+          label + ' gemaild.' + (data.ai ? '' : ' Let op: AI-analyse mislukt (' + data.error + '), standaardlijst gebruikt.'),
+          !data.ai
+        );
+      } catch (err) {
+        setAiActionsStatus(err.message, true);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
+  runActionsMail('aiRunWeeklyActions', '/api/ai/weekly-actions', 'Actiepunten (week)');
+  runActionsMail('aiRunMonthlyActions', '/api/ai/monthly-actions', 'Actiepunten (maand)');
 
   document.getElementById('aiRunReport').addEventListener('click', async function () {
     var btn = this;

@@ -38,6 +38,34 @@ geschreven, verklarende inleiding. Het rapport verschijnt in de tab
 **Rapporten**. Lukt de AI niet, dan wordt een standaardinleiding gebruikt.
 Met "Weekrapport nu maken" kan admin het handmatig testen.
 
+Optioneel maakt de server ook, elke 1e van de maand (na 08:00 Amsterdamse
+tijd), een **maandrapport**: dezelfde opzet als het weekrapport maar over de
+volledige vorige kalendermaand (vergeleken met de maand ervoor), met twee
+extra secties omdat een maand meer om over te rapporteren geeft: **sessies
+per week** binnen de maand en de **populairste pagina's**. Ook dit rapport
+verschijnt in de tab **Rapporten**. Aan/uit via de checkbox in
+AI-instellingen; "Maandrapport nu maken" test het handmatig.
+
+## Actiepunten per mail (niet op de site)
+
+Los van de PDF-rapporten in **Rapporten** kan de server elke maandag en elke
+1e van de maand een kort **actiepunten-rapport** mailen: een door de AI
+geschreven, genummerde lijst van 4–8 concrete verbeterpunten op basis van de
+cijfers van die periode, plus een tabel met de kerncijfers. Dit rapport wordt
+nooit gepubliceerd op het dashboard — het gaat alleen als e-mail naar
+`bojan@studiovanderheide.nl` (of het adres in `REPORT_EMAIL_TO`). Lukt de AI
+niet, dan bevat de mail een automatisch gegenereerde standaardlijst met de
+grootste uitschieters.
+
+Vereist SMTP-instellingen in `.env` (zie `.env.example`: `SMTP_HOST`,
+`SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, optioneel `SMTP_SECURE`, `MAIL_FROM`,
+`REPORT_EMAIL_TO`). Zonder SMTP-configuratie blijft de rest van het
+dashboard werken; alleen het mailen mislukt (met een duidelijke foutmelding
+in de server-log en, bij handmatig gebruik, in de statusregel).
+
+Aan/uit via de checkboxes onder **Actiepunten per mail** in
+AI-instellingen; "Actiepunten (week/maand) nu mailen" test het handmatig.
+
 ## AI-verklaring op het Dashboard
 
 Boven de widgets staat een korte, door AI geschreven verklaring van de cijfers.

@@ -8,6 +8,7 @@ const multer = require('multer');
 const { BetaAnalyticsDataClient } = require('@google-analytics/data');
 const ai = require('./ai');
 const { createWeeklyReport } = require('./weekly-report');
+const { createMonthlyReport } = require('./monthly-report');
 const { createExplainer, isConfigured: isAiConfigured, AUTO_RANGES: AI_AUTO_RANGES } = require('./explain');
 
 const app = express();
@@ -307,6 +308,22 @@ async function fetchOfferteByCampaign(dateRange) {
   }));
 }
 
+async function fetchTopPages(dateRange) {
+  const [response] = await analyticsDataClient.runReport({
+    property: `properties/${PROPERTY_ID}`,
+    dateRanges: [{ startDate: dateRange.start, endDate: dateRange.end }],
+    dimensions: [{ name: 'pagePath' }],
+    metrics: [{ name: 'screenPageViews' }],
+    orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }],
+    limit: 10,
+  });
+
+  return (response.rows || []).map((row) => ({
+    page: row.dimensionValues[0].value,
+    pageviews: parseInt(row.metricValues[0].value, 10),
+  }));
+}
+
 // GA4's 'date' dimension comes back as YYYYMMDD (no separators)
 function ga4DateToIso(ga4Date) {
   return `${ga4Date.slice(0, 4)}-${ga4Date.slice(4, 6)}-${ga4Date.slice(6, 8)}`;
@@ -357,6 +374,7 @@ async function buildAnalytics(ranges, rangeParam, compareParam) {
     offerteByCampaign,
     dailySessions,
     dailySessionsPrev,
+    topPages,
   ] = await Promise.all([
     fetchMetricsForRange(ranges.current),
     fetchMetricsForRange(ranges.previous),
@@ -368,6 +386,7 @@ async function buildAnalytics(ranges, rangeParam, compareParam) {
     fetchOfferteByCampaign(ranges.current),
     fetchDailySessions(ranges.current, daysInRange(ranges.current)),
     fetchDailySessions(ranges.previous, daysInRange(ranges.previous)),
+    fetchTopPages(ranges.current),
   ]);
 
   const offerteCount = offerteByPage.reduce((sum, r) => sum + r.count, 0);
@@ -458,6 +477,7 @@ async function buildAnalytics(ranges, rangeParam, compareParam) {
     offerteByCampaign,
     dailySessions,
     dailySessionsPrev,
+    topPages,
   };
 }
 
@@ -654,6 +674,9 @@ app.put('/api/ai/settings', basicAuth, requireAdmin, (req, res) => {
 
   settings.activeProvider = body.activeProvider;
   settings.weeklyReportEnabled = Boolean(body.weeklyReportEnabled);
+  settings.monthlyReportEnabled = Boolean(body.monthlyReportEnabled);
+  settings.weeklyActionsEnabled = Boolean(body.weeklyActionsEnabled);
+  settings.monthlyActionsEnabled = Boolean(body.monthlyActionsEnabled);
   ai.writeSettings(settings);
   res.json(ai.publicSettings(settings));
 });
@@ -681,6 +704,12 @@ const weeklyReport = createWeeklyReport({
   saveReport,
 });
 
+const monthlyReport = createMonthlyReport({
+  buildAnalytics,
+  readGoogleAds,
+  saveReport,
+});
+
 app.post('/api/ai/weekly-report', basicAuth, requireAdmin, async (req, res) => {
   try {
     const result = await weeklyReport.generate();
@@ -688,6 +717,34 @@ app.post('/api/ai/weekly-report', basicAuth, requireAdmin, async (req, res) => {
   } catch (err) {
     console.error('Manual weekly report failed:', err.message);
     res.status(500).json({ error: 'Weekrapport maken mislukt: ' + err.message });
+  }
+});
+
+app.post('/api/ai/monthly-report', basicAuth, requireAdmin, async (req, res) => {
+  try {
+    const result = await monthlyReport.generate();
+    res.status(201).json(result);
+  } catch (err) {
+    console.error('Manual monthly report failed:', err.message);
+    res.status(500).json({ error: 'Maandrapport maken mislukt: ' + err.message });
+  }
+});
+
+app.post('/api/ai/weekly-actions', basicAuth, requireAdmin, async (req, res) => {
+  try {
+    res.status(201).json(await weeklyReport.sendActions());
+  } catch (err) {
+    console.error('Manual weekly action items mail failed:', err.message);
+    res.status(500).json({ error: 'Actiepunten mailen mislukt: ' + err.message });
+  }
+});
+
+app.post('/api/ai/monthly-actions', basicAuth, requireAdmin, async (req, res) => {
+  try {
+    res.status(201).json(await monthlyReport.sendActions());
+  } catch (err) {
+    console.error('Manual monthly action items mail failed:', err.message);
+    res.status(500).json({ error: 'Actiepunten mailen mislukt: ' + err.message });
   }
 });
 
@@ -745,4 +802,5 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.listen(PORT, () => {
   console.log(`White Vision Dashboard running on port ${PORT}`);
   weeklyReport.start();
+  monthlyReport.start();
 });

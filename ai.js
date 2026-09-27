@@ -27,7 +27,14 @@ function defaultSettings() {
   Object.keys(PROVIDERS).forEach((key) => {
     providers[key] = { baseUrl: PROVIDERS[key].defaultBaseUrl, apiKey: '', model: '' };
   });
-  return { activeProvider: 'gemini', providers, weeklyReportEnabled: true };
+  return {
+    activeProvider: 'gemini',
+    providers,
+    weeklyReportEnabled: true,
+    monthlyReportEnabled: true,
+    weeklyActionsEnabled: true,
+    monthlyActionsEnabled: true,
+  };
 }
 
 function readSettings() {
@@ -40,6 +47,9 @@ function readSettings() {
     });
     if (PROVIDERS[saved.activeProvider]) defaults.activeProvider = saved.activeProvider;
     if (typeof saved.weeklyReportEnabled === 'boolean') defaults.weeklyReportEnabled = saved.weeklyReportEnabled;
+    if (typeof saved.monthlyReportEnabled === 'boolean') defaults.monthlyReportEnabled = saved.monthlyReportEnabled;
+    if (typeof saved.weeklyActionsEnabled === 'boolean') defaults.weeklyActionsEnabled = saved.weeklyActionsEnabled;
+    if (typeof saved.monthlyActionsEnabled === 'boolean') defaults.monthlyActionsEnabled = saved.monthlyActionsEnabled;
   } catch (err) {
     console.error('AI settings read error:', err.message);
   }
@@ -61,6 +71,9 @@ function publicSettings(settings) {
   return {
     activeProvider: settings.activeProvider,
     weeklyReportEnabled: settings.weeklyReportEnabled,
+    monthlyReportEnabled: settings.monthlyReportEnabled,
+    weeklyActionsEnabled: settings.weeklyActionsEnabled,
+    monthlyActionsEnabled: settings.monthlyActionsEnabled,
     providers,
     providerMeta: PROVIDERS,
   };

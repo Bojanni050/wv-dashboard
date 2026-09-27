@@ -1,7 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const ai = require('./ai');
-const { amsterdamNow, shiftDate, cleanText, stripGreetings } = require('./weekly-report');
+const { amsterdamNow, shiftDate } = require('./lib/dates');
+const { cleanText, stripGreetings } = require('./lib/text');
 
 const STATE_FILE = path.join(__dirname, 'data', 'ai-explanations.json');
 

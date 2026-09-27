@@ -384,12 +384,42 @@
             <input type="checkbox" id="aiWeeklyEnabled" />
             Elke maandag automatisch een weekrapport (PDF) maken
           </label>
+          <label class="ai-checkbox">
+            <input type="checkbox" id="aiMonthlyEnabled" />
+            Elke 1e van de maand automatisch een (uitgebreider) maandrapport (PDF) maken
+          </label>
           <div class="reports-upload">
             <button type="submit">Opslaan</button>
             <button type="button" class="ai-secondary" id="aiRunReport">Weekrapport nu maken</button>
+            <button type="button" class="ai-secondary" id="aiRunMonthlyReport">Maandrapport nu maken</button>
           </div>
         </form>
         <p class="reports-upload-status" id="aiStatus" hidden></p>
+      </section>
+
+      <section class="table-card">
+        <h2 class="card-title">Actiepunten per mail</h2>
+        <p class="card-subtitle">
+          Wordt niet op het dashboard gepubliceerd — alleen gemaild naar
+          <strong>bojan@studiovanderheide.nl</strong> (of het adres in <code>REPORT_EMAIL_TO</code>).
+          Vereist SMTP-instellingen op de server.
+        </p>
+        <form class="ai-form" id="aiActionsForm">
+          <label class="ai-checkbox">
+            <input type="checkbox" id="aiWeeklyActionsEnabled" />
+            Elke maandag een actiepunten-rapport mailen
+          </label>
+          <label class="ai-checkbox">
+            <input type="checkbox" id="aiMonthlyActionsEnabled" />
+            Elke 1e van de maand een actiepunten-rapport mailen
+          </label>
+          <div class="reports-upload">
+            <button type="submit">Opslaan</button>
+            <button type="button" class="ai-secondary" id="aiRunWeeklyActions">Actiepunten (week) nu mailen</button>
+            <button type="button" class="ai-secondary" id="aiRunMonthlyActions">Actiepunten (maand) nu mailen</button>
+          </div>
+        </form>
+        <p class="reports-upload-status" id="aiActionsStatus" hidden></p>
       </section>
     </div>
     <!-- /AI settings tab -->

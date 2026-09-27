@@ -5,7 +5,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
-COPY index.js ai.js weekly-report.js explain.js ./
+COPY index.js ai.js intro.js report-pdf.js weekly-report.js monthly-report.js actions-report.js mailer.js explain.js ./
+COPY lib ./lib
 COPY public ./public
 COPY fonts ./fonts
 
