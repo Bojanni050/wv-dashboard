@@ -398,11 +398,55 @@
       </section>
 
       <section class="table-card">
+        <h2 class="card-title">E-mail (SMTP)</h2>
+        <p class="card-subtitle">
+          Nodig om de actiepunten-rapporten hieronder te kunnen mailen. Wachtwoord en API-keys worden
+          versleuteld op de server bewaard en nooit naar de browser teruggestuurd.
+        </p>
+        <form class="ai-form" id="smtpForm">
+          <label class="login-field">
+            <span>SMTP-host</span>
+            <input type="text" id="smtpHost" placeholder="smtp.jouwprovider.nl" />
+          </label>
+          <div class="ai-model-row">
+            <label class="login-field">
+              <span>Poort</span>
+              <input type="number" id="smtpPort" min="1" max="65535" placeholder="587" />
+            </label>
+            <label class="ai-checkbox" style="align-self:center">
+              <input type="checkbox" id="smtpSecure" />
+              Gebruik TLS/SSL (poort 465)
+            </label>
+          </div>
+          <label class="login-field">
+            <span>Gebruikersnaam</span>
+            <input type="text" id="smtpUser" autocomplete="off" />
+          </label>
+          <label class="login-field">
+            <span>Wachtwoord</span>
+            <input type="password" id="smtpPass" autocomplete="off" />
+          </label>
+          <label class="login-field">
+            <span>Afzender (from)</span>
+            <input type="email" id="smtpFrom" placeholder="rapporten@studiovanderheide.nl" />
+          </label>
+          <label class="login-field">
+            <span>Ontvanger actiepunten (to)</span>
+            <input type="email" id="smtpTo" placeholder="bojan@studiovanderheide.nl" />
+          </label>
+          <div class="reports-upload">
+            <button type="submit">Opslaan</button>
+            <button type="button" class="ai-secondary" id="smtpTest">Testmail versturen</button>
+          </div>
+        </form>
+        <p class="reports-upload-status" id="smtpStatus" hidden></p>
+      </section>
+
+      <section class="table-card">
         <h2 class="card-title">Actiepunten per mail</h2>
         <p class="card-subtitle">
-          Wordt niet op het dashboard gepubliceerd — alleen gemaild naar
-          <strong>bojan@studiovanderheide.nl</strong> (of het adres in <code>REPORT_EMAIL_TO</code>).
-          Vereist SMTP-instellingen op de server.
+          Wordt niet op het dashboard gepubliceerd — alleen gemaild naar het adres hierboven onder
+          "Ontvanger actiepunten" (standaard <strong>bojan@studiovanderheide.nl</strong>).
         </p>
         <form class="ai-form" id="aiActionsForm">
           <label class="ai-checkbox">

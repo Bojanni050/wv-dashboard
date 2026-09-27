@@ -57,11 +57,30 @@ nooit gepubliceerd op het dashboard — het gaat alleen als e-mail naar
 niet, dan bevat de mail een automatisch gegenereerde standaardlijst met de
 grootste uitschieters.
 
-Vereist SMTP-instellingen in `.env` (zie `.env.example`: `SMTP_HOST`,
-`SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, optioneel `SMTP_SECURE`, `MAIL_FROM`,
-`REPORT_EMAIL_TO`). Zonder SMTP-configuratie blijft de rest van het
-dashboard werken; alleen het mailen mislukt (met een duidelijke foutmelding
-in de server-log en, bij handmatig gebruik, in de statusregel).
+Vereist SMTP-instellingen, in te stellen door admin op het dashboard zelf
+onder AI-instellingen → **E-mail (SMTP)**: host, poort, TLS/SSL, gebruiker,
+wachtwoord, afzender en de ontvanger van de actiepunten-mails. Een
+"Testmail versturen"-knop slaat de ingevulde instellingen op en verstuurt
+direct een testmail, zodat je een foute configuratie meteen ziet. Instellen
+kan ook via `.env` (zie `.env.example`: `SMTP_HOST`, `SMTP_PORT`,
+`SMTP_USER`, `SMTP_PASS`, optioneel `SMTP_SECURE`, `MAIL_FROM`,
+`REPORT_EMAIL_TO`) — de instellingen op het dashboard hebben voorrang zodra
+ze zijn ingevuld. Zonder SMTP-configuratie (via de tab of `.env`) blijft de
+rest van het dashboard werken; alleen het mailen mislukt (met een duidelijke
+foutmelding in de server-log en, bij handmatig gebruik, in de statusregel).
+
+## Opslag en versleuteling
+
+Er is geen database: instellingen staan in JSON-bestanden onder `data/`
+(bijv. `data/ai-settings.json`), rapporten als PDF onder `reports/`. De
+gevoelige velden daarin — de AI-provider API-keys en het SMTP-wachtwoord —
+worden versleuteld (AES-256-GCM) voordat ze naar schijf gaan; ze staan dus
+nooit in leesbare tekst in die bestanden. De sleutel komt uit
+`SETTINGS_ENCRYPTION_KEY` (zie `.env.example`) of wordt, als die niet is
+gezet, automatisch aangemaakt en bewaard in `data/.encryption-key` (alleen
+leesbaar door de server-user). Zet `SETTINGS_ENCRYPTION_KEY` expliciet zodra
+`data/` ergens wordt gebackupt of gesynchroniseerd, en bewaar die sleutel
+apart van die backup.
 
 Aan/uit via de checkboxes onder **Actiepunten per mail** in
 AI-instellingen; "Actiepunten (week/maand) nu mailen" test het handmatig.

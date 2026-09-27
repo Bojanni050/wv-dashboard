@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const secrets = require('./lib/crypto');
 
 const DATA_DIR = path.join(__dirname, 'data');
 const AI_SETTINGS_FILE = path.join(DATA_DIR, 'ai-settings.json');
@@ -34,6 +35,7 @@ function defaultSettings() {
     monthlyReportEnabled: true,
     weeklyActionsEnabled: true,
     monthlyActionsEnabled: true,
+    smtp: { host: '', port: 587, secure: false, user: '', pass: '', from: '', to: '' },
   };
 }
 
@@ -44,21 +46,34 @@ function readSettings() {
     const saved = JSON.parse(fs.readFileSync(AI_SETTINGS_FILE, 'utf8'));
     Object.keys(PROVIDERS).forEach((key) => {
       defaults.providers[key] = Object.assign(defaults.providers[key], (saved.providers || {})[key] || {});
+      defaults.providers[key].apiKey = secrets.decrypt(defaults.providers[key].apiKey);
     });
     if (PROVIDERS[saved.activeProvider]) defaults.activeProvider = saved.activeProvider;
     if (typeof saved.weeklyReportEnabled === 'boolean') defaults.weeklyReportEnabled = saved.weeklyReportEnabled;
     if (typeof saved.monthlyReportEnabled === 'boolean') defaults.monthlyReportEnabled = saved.monthlyReportEnabled;
     if (typeof saved.weeklyActionsEnabled === 'boolean') defaults.weeklyActionsEnabled = saved.weeklyActionsEnabled;
     if (typeof saved.monthlyActionsEnabled === 'boolean') defaults.monthlyActionsEnabled = saved.monthlyActionsEnabled;
+    if (saved.smtp) defaults.smtp = Object.assign(defaults.smtp, saved.smtp);
+    defaults.smtp.pass = secrets.decrypt(defaults.smtp.pass);
   } catch (err) {
     console.error('AI settings read error:', err.message);
   }
   return defaults;
 }
 
+// Provider API keys and the SMTP password are encrypted before they hit
+// disk (see lib/crypto.js) — data/ai-settings.json holds no secrets in the
+// clear. The settings object handed back to the caller keeps the plain
+// values so the rest of the app (generateText, mailer) can use them.
 function writeSettings(settings) {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(AI_SETTINGS_FILE, JSON.stringify(settings, null, 2), { mode: 0o600 });
+  const onDisk = JSON.parse(JSON.stringify(settings));
+  Object.keys(PROVIDERS).forEach((key) => {
+    const p = onDisk.providers[key];
+    if (p) p.apiKey = secrets.encrypt(p.apiKey);
+  });
+  if (onDisk.smtp) onDisk.smtp.pass = secrets.encrypt(onDisk.smtp.pass);
+  fs.writeFileSync(AI_SETTINGS_FILE, JSON.stringify(onDisk, null, 2), { mode: 0o600 });
 }
 
 // Settings as sent to the browser: API keys never leave the server.
@@ -68,6 +83,7 @@ function publicSettings(settings) {
     const p = settings.providers[key];
     providers[key] = { baseUrl: p.baseUrl, model: p.model, hasKey: Boolean(p.apiKey) };
   });
+  const smtp = settings.smtp || {};
   return {
     activeProvider: settings.activeProvider,
     weeklyReportEnabled: settings.weeklyReportEnabled,
@@ -76,6 +92,15 @@ function publicSettings(settings) {
     monthlyActionsEnabled: settings.monthlyActionsEnabled,
     providers,
     providerMeta: PROVIDERS,
+    smtp: {
+      host: smtp.host || '',
+      port: smtp.port || 587,
+      secure: Boolean(smtp.secure),
+      user: smtp.user || '',
+      from: smtp.from || '',
+      to: smtp.to || '',
+      hasPass: Boolean(smtp.pass),
+    },
   };
 }
 

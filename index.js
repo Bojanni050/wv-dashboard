@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const multer = require('multer');
 const { BetaAnalyticsDataClient } = require('@google-analytics/data');
 const ai = require('./ai');
+const mailer = require('./mailer');
 const { createWeeklyReport } = require('./weekly-report');
 const { createMonthlyReport } = require('./monthly-report');
 const { createExplainer, isConfigured: isAiConfigured, AUTO_RANGES: AI_AUTO_RANGES } = require('./explain');
@@ -672,6 +673,24 @@ app.put('/api/ai/settings', basicAuth, requireAdmin, (req, res) => {
     return res.status(400).json({ error: err.message });
   }
 
+  const incomingSmtp = body.smtp;
+  if (incomingSmtp) {
+    const port = parseInt(incomingSmtp.port, 10);
+    if (incomingSmtp.port !== undefined && incomingSmtp.port !== '' && (!isNonNegativeNumber(port) || port === 0 || port > 65535)) {
+      return res.status(400).json({ error: 'SMTP-poort moet een geldig poortnummer zijn.' });
+    }
+    settings.smtp = Object.assign({}, settings.smtp, {
+      host: String(incomingSmtp.host || '').trim(),
+      port: port || settings.smtp.port || 587,
+      secure: Boolean(incomingSmtp.secure),
+      user: String(incomingSmtp.user || '').trim(),
+      from: String(incomingSmtp.from || '').trim(),
+      to: String(incomingSmtp.to || '').trim(),
+    });
+    // Blank password = keep the stored one
+    if (typeof incomingSmtp.pass === 'string' && incomingSmtp.pass.trim()) settings.smtp.pass = incomingSmtp.pass.trim();
+  }
+
   settings.activeProvider = body.activeProvider;
   settings.weeklyReportEnabled = Boolean(body.weeklyReportEnabled);
   settings.monthlyReportEnabled = Boolean(body.monthlyReportEnabled);
@@ -679,6 +698,17 @@ app.put('/api/ai/settings', basicAuth, requireAdmin, (req, res) => {
   settings.monthlyActionsEnabled = Boolean(body.monthlyActionsEnabled);
   ai.writeSettings(settings);
   res.json(ai.publicSettings(settings));
+});
+
+app.post('/api/ai/smtp-test', basicAuth, requireAdmin, async (req, res) => {
+  try {
+    const to = typeof (req.body || {}).to === 'string' && req.body.to.trim() ? req.body.to.trim() : undefined;
+    await mailer.sendTestMail(to);
+    res.json({ ok: true, to: to || mailer.reportRecipient() });
+  } catch (err) {
+    console.error('SMTP test mail failed:', err.message);
+    res.status(400).json({ error: 'Testmail versturen mislukt: ' + err.message });
+  }
 });
 
 app.post('/api/ai/models', basicAuth, requireAdmin, async (req, res) => {

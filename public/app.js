@@ -988,6 +988,16 @@
       document.getElementById('aiWeeklyActionsEnabled').checked = aiState.weeklyActionsEnabled;
       document.getElementById('aiMonthlyActionsEnabled').checked = aiState.monthlyActionsEnabled;
       showAiProvider(aiState.activeProvider);
+
+      var smtp = aiState.smtp || {};
+      document.getElementById('smtpHost').value = smtp.host || '';
+      document.getElementById('smtpPort').value = smtp.port || 587;
+      document.getElementById('smtpSecure').checked = Boolean(smtp.secure);
+      document.getElementById('smtpUser').value = smtp.user || '';
+      document.getElementById('smtpPass').value = '';
+      document.getElementById('smtpPass').placeholder = smtp.hasPass ? 'Opgeslagen — laat leeg om te behouden' : 'Wachtwoord';
+      document.getElementById('smtpFrom').value = smtp.from || '';
+      document.getElementById('smtpTo').value = smtp.to || '';
     } catch (err) {
       console.error('AI settings load error:', err);
       aiLoaded = false;
@@ -1091,6 +1101,82 @@
     el.classList.toggle('error', Boolean(isError));
     el.classList.toggle('success', !isError);
   }
+
+  // --- SMTP settings (admin) ---
+  function setSmtpStatus(message, isError) {
+    var el = document.getElementById('smtpStatus');
+    el.textContent = message;
+    el.hidden = !message;
+    el.classList.toggle('error', Boolean(isError));
+    el.classList.toggle('success', !isError);
+  }
+
+  async function saveSmtpSettings() {
+    var res = await apiFetch('/api/ai/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        activeProvider: aiState.activeProvider,
+        weeklyReportEnabled: aiState.weeklyReportEnabled,
+        monthlyReportEnabled: aiState.monthlyReportEnabled,
+        weeklyActionsEnabled: aiState.weeklyActionsEnabled,
+        monthlyActionsEnabled: aiState.monthlyActionsEnabled,
+        providers: {},
+        smtp: {
+          host: document.getElementById('smtpHost').value,
+          port: document.getElementById('smtpPort').value,
+          secure: document.getElementById('smtpSecure').checked,
+          user: document.getElementById('smtpUser').value,
+          pass: document.getElementById('smtpPass').value,
+          from: document.getElementById('smtpFrom').value,
+          to: document.getElementById('smtpTo').value,
+        },
+      }),
+    });
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Opslaan mislukt');
+    aiState = data;
+    document.getElementById('smtpPass').value = '';
+    document.getElementById('smtpPass').placeholder = data.smtp.hasPass ? 'Opgeslagen — laat leeg om te behouden' : 'Wachtwoord';
+    return data;
+  }
+
+  document.getElementById('smtpForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    if (!aiState) return;
+    setSmtpStatus('Opslaan…', false);
+    try {
+      await saveSmtpSettings();
+      setSmtpStatus('Opgeslagen.', false);
+    } catch (err) {
+      setSmtpStatus(err.message, true);
+    }
+  });
+
+  // Saves first, so the test always uses what's currently in the form
+  // rather than whatever was saved last.
+  document.getElementById('smtpTest').addEventListener('click', async function () {
+    if (!aiState) return;
+    var btn = this;
+    btn.disabled = true;
+    setSmtpStatus('Instellingen opslaan…', false);
+    try {
+      await saveSmtpSettings();
+      setSmtpStatus('Testmail wordt verstuurd…', false);
+      var res = await apiFetch('/api/ai/smtp-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: document.getElementById('smtpTo').value }),
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Testmail versturen mislukt');
+      setSmtpStatus('Testmail verstuurd naar ' + data.to + '.', false);
+    } catch (err) {
+      setSmtpStatus(err.message, true);
+    } finally {
+      btn.disabled = false;
+    }
+  });
 
   document.getElementById('aiActionsForm').addEventListener('submit', async function (e) {
     e.preventDefault();
