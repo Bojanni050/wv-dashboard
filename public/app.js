@@ -1204,6 +1204,42 @@
     }
   });
 
+  function setReportMailStatus(message, isError) {
+    var el = document.getElementById('aiReportMailStatus');
+    el.textContent = message;
+    el.hidden = !message;
+    el.classList.toggle('error', Boolean(isError));
+    el.classList.toggle('success', !isError);
+  }
+
+  // Generates a fresh PDF, saves it in Rapporten and mails it as an attachment.
+  function runReportMail(buttonId, endpoint, label) {
+    document.getElementById(buttonId).addEventListener('click', async function () {
+      var btn = this;
+      btn.disabled = true;
+      setReportMailStatus(label + ' wordt gemaakt en gemaild (dit kan een halve minuut duren)…', false);
+      try {
+        var res = await apiFetch(endpoint, { method: 'POST' });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Rapport mailen mislukt');
+        setReportMailStatus(
+          label + ' is gemaild naar ' + data.to + ' en toegevoegd aan Rapporten.' +
+            (data.aiUsed ? '' : ' Let op: AI-inleiding mislukt (' + data.aiError + '), standaardtekst gebruikt.'),
+          !data.aiUsed
+        );
+        reportsLoaded = true;
+        loadReports();
+      } catch (err) {
+        setReportMailStatus(err.message, true);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
+  runReportMail('aiRunWeeklyReportMail', '/api/ai/weekly-report-mail', 'Weekrapport (PDF)');
+  runReportMail('aiRunMonthlyReportMail', '/api/ai/monthly-report-mail', 'Maandrapport (PDF)');
+
   function runActionsMail(buttonId, endpoint, label) {
     document.getElementById(buttonId).addEventListener('click', async function () {
       var btn = this;

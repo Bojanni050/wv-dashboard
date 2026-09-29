@@ -5,6 +5,7 @@ const { amsterdamNow, shiftDate, addMonths, firstOfMonth, mondayOf, nlDate } = r
 const { writeIntro } = require('./intro');
 const { renderReportPdf, fmtNum } = require('./report-pdf');
 const { sendActionItems } = require('./actions-report');
+const { sendReportPdf } = require('./report-mail');
 
 const STATE_FILE = path.join(__dirname, 'data', 'monthly-report-state.json');
 const RUN_AFTER_HOUR = 8; // Amsterdam time, on the 1st of the month
@@ -92,11 +93,13 @@ function createMonthlyReport({ buildAnalytics, readGoogleAds, saveReport }) {
     return buildAnalytics({ current: ranges.current, previous: ranges.previous }, 'custom', 'previous');
   }
 
+  // Returns the buffer as well, so callers can also mail the PDF.
   async function generateSitePdf(data, ranges) {
     const intro = await writeIntro('month', data, ranges, readGoogleAds());
     const buffer = await renderReportPdf(data, ranges, intro, PDF_OPTS);
-    const entry = saveReport(buffer, 'Maandrapport ' + ranges.current.start + ' t-m ' + ranges.current.end + '.pdf');
-    return { entry, aiUsed: intro.ai, aiError: intro.error };
+    const filename = 'Maandrapport ' + ranges.current.start + ' t-m ' + ranges.current.end + '.pdf';
+    const entry = saveReport(buffer, filename);
+    return { entry, buffer, filename, aiUsed: intro.ai, aiError: intro.error };
   }
 
   async function generate(now) {
@@ -106,7 +109,36 @@ function createMonthlyReport({ buildAnalytics, readGoogleAds, saveReport }) {
       const ranges = lastMonthRanges(now || new Date());
       const data = await fetchData(ranges);
       const result = await generateSitePdf(data, ranges);
-      return Object.assign({ monthKey: ranges.monthKey }, result);
+      return { monthKey: ranges.monthKey, entry: result.entry, aiUsed: result.aiUsed, aiError: result.aiError };
+    } finally {
+      running = false;
+    }
+  }
+
+  // Manual "mail het rapport nu" trigger: fresh data, and the PDF is both
+  // saved in the Rapporten tab and mailed to the admin recipient.
+  async function sendPdf(now) {
+    if (running) throw new Error('Er wordt al een maandrapport gemaakt');
+    running = true;
+    try {
+      const ranges = lastMonthRanges(now || new Date());
+      const data = await fetchData(ranges);
+      const result = await generateSitePdf(data, ranges);
+      const mailed = await sendReportPdf({
+        kind: 'month',
+        data,
+        ranges,
+        buffer: result.buffer,
+        filename: result.filename,
+        aiUsed: result.aiUsed,
+      });
+      return {
+        monthKey: ranges.monthKey,
+        entry: result.entry,
+        to: mailed.to,
+        aiUsed: result.aiUsed,
+        aiError: result.aiError,
+      };
     } finally {
       running = false;
     }
@@ -175,7 +207,7 @@ function createMonthlyReport({ buildAnalytics, readGoogleAds, saveReport }) {
     setTimeout(tick, 20000);
   }
 
-  return { generate, sendActions, start };
+  return { generate, sendActions, sendPdf, start };
 }
 
 module.exports = { createMonthlyReport, lastMonthRanges };

@@ -5,6 +5,7 @@ const { amsterdamNow, shiftDate, mondayOf, nlWeekday } = require('./lib/dates');
 const { writeIntro } = require('./intro');
 const { renderReportPdf } = require('./report-pdf');
 const { sendActionItems } = require('./actions-report');
+const { sendReportPdf } = require('./report-mail');
 
 const STATE_FILE = path.join(__dirname, 'data', 'weekly-report-state.json');
 const RUN_AFTER_HOUR = 7; // Amsterdam time, on Mondays
@@ -57,11 +58,13 @@ function createWeeklyReport({ buildAnalytics, readGoogleAds, saveReport }) {
     return buildAnalytics({ current: ranges.current, previous: ranges.previous }, 'custom', 'previous');
   }
 
+  // Returns the buffer as well, so callers can also mail the PDF.
   async function generateSitePdf(data, ranges) {
     const intro = await writeIntro('week', data, ranges, readGoogleAds());
     const buffer = await renderReportPdf(data, ranges, intro, PDF_OPTS);
-    const entry = saveReport(buffer, 'Weekrapport ' + ranges.current.start + ' t-m ' + ranges.current.end + '.pdf');
-    return { entry, aiUsed: intro.ai, aiError: intro.error };
+    const filename = 'Weekrapport ' + ranges.current.start + ' t-m ' + ranges.current.end + '.pdf';
+    const entry = saveReport(buffer, filename);
+    return { entry, buffer, filename, aiUsed: intro.ai, aiError: intro.error };
   }
 
   async function generate(now) {
@@ -71,7 +74,36 @@ function createWeeklyReport({ buildAnalytics, readGoogleAds, saveReport }) {
       const ranges = lastWeekRanges(now || new Date());
       const data = await fetchData(ranges);
       const result = await generateSitePdf(data, ranges);
-      return Object.assign({ weekKey: ranges.weekKey }, result);
+      return { weekKey: ranges.weekKey, entry: result.entry, aiUsed: result.aiUsed, aiError: result.aiError };
+    } finally {
+      running = false;
+    }
+  }
+
+  // Manual "mail het rapport nu" trigger: fresh data, and the PDF is both
+  // saved in the Rapporten tab and mailed to the admin recipient.
+  async function sendPdf(now) {
+    if (running) throw new Error('Er wordt al een weekrapport gemaakt');
+    running = true;
+    try {
+      const ranges = lastWeekRanges(now || new Date());
+      const data = await fetchData(ranges);
+      const result = await generateSitePdf(data, ranges);
+      const mailed = await sendReportPdf({
+        kind: 'week',
+        data,
+        ranges,
+        buffer: result.buffer,
+        filename: result.filename,
+        aiUsed: result.aiUsed,
+      });
+      return {
+        weekKey: ranges.weekKey,
+        entry: result.entry,
+        to: mailed.to,
+        aiUsed: result.aiUsed,
+        aiError: result.aiError,
+      };
     } finally {
       running = false;
     }
@@ -140,7 +172,7 @@ function createWeeklyReport({ buildAnalytics, readGoogleAds, saveReport }) {
     setTimeout(tick, 15000);
   }
 
-  return { generate, sendActions, start };
+  return { generate, sendActions, sendPdf, start };
 }
 
 module.exports = { createWeeklyReport, lastWeekRanges };

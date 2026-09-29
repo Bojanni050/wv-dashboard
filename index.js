@@ -760,6 +760,24 @@ app.post('/api/ai/monthly-report', basicAuth, requireAdmin, async (req, res) => 
   }
 });
 
+app.post('/api/ai/weekly-report-mail', basicAuth, requireAdmin, async (req, res) => {
+  try {
+    res.status(201).json(await weeklyReport.sendPdf());
+  } catch (err) {
+    console.error('Manual weekly report mail failed:', err.message);
+    res.status(500).json({ error: 'Weekrapport mailen mislukt: ' + err.message });
+  }
+});
+
+app.post('/api/ai/monthly-report-mail', basicAuth, requireAdmin, async (req, res) => {
+  try {
+    res.status(201).json(await monthlyReport.sendPdf());
+  } catch (err) {
+    console.error('Manual monthly report mail failed:', err.message);
+    res.status(500).json({ error: 'Maandrapport mailen mislukt: ' + err.message });
+  }
+});
+
 app.post('/api/ai/weekly-actions', basicAuth, requireAdmin, async (req, res) => {
   try {
     res.status(201).json(await weeklyReport.sendActions());

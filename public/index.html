@@ -443,6 +443,21 @@
       </section>
 
       <section class="table-card">
+        <h2 class="card-title">Rapport (PDF) per mail</h2>
+        <p class="card-subtitle">
+          Maakt een vers rapport uit de actuele cijfers, voegt het toe aan Rapporten en mailt de PDF
+          als bijlage naar het adres hierboven onder "Ontvanger actiepunten"
+          (standaard <strong>bojan@studiovanderheide.nl</strong>). De weekrapport-knop neemt de vorige
+          week (ma–zo), de maandrapport-knop de vorige kalendermaand.
+        </p>
+        <div class="reports-upload">
+          <button type="button" class="ai-secondary" id="aiRunWeeklyReportMail">Weekrapport (PDF) nu mailen</button>
+          <button type="button" class="ai-secondary" id="aiRunMonthlyReportMail">Maandrapport (PDF) nu mailen</button>
+        </div>
+        <p class="reports-upload-status" id="aiReportMailStatus" hidden></p>
+      </section>
+
+      <section class="table-card">
         <h2 class="card-title">Actiepunten per mail</h2>
         <p class="card-subtitle">
           Wordt niet op het dashboard gepubliceerd — alleen gemaild naar het adres hierboven onder
