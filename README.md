@@ -85,6 +85,17 @@ apart van die backup.
 Aan/uit via de checkboxes onder **Actiepunten per mail** in
 AI-instellingen; "Actiepunten (week/maand) nu mailen" test het handmatig.
 
+## Rapport (PDF) per mail
+
+Admin kan het week- of maandrapport ook direct als **PDF-bijlage** mailen via
+de twee knoppen onder **Rapport (PDF) per mail** in AI-instellingen
+("Weekrapport (PDF) nu mailen" / "Maandrapport (PDF) nu mailen"). De knop
+maakt een vers rapport uit de actuele cijfers, voegt het toe aan de tab
+**Rapporten** en mailt de PDF als bijlage naar hetzelfde adres als de
+actiepunten (`bojan@studiovanderheide.nl`, of het adres in
+`REPORT_EMAIL_TO`). De mailtekst zelf bevat een samenvatting met de
+kerncijfers, zodat de mail ook op een telefoon leesbaar is.
+
 ## AI-verklaring op het Dashboard
 
 Boven de widgets staat een korte, door AI geschreven verklaring van de cijfers.
