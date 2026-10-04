@@ -7,7 +7,7 @@ const mailer = require('./mailer');
 const { nlDate } = require('./lib/dates');
 const { cleanText, stripGreetings } = require('./lib/text');
 const { buildPromptData } = require('./lib/prompt-data');
-const { fmtNum, fmtPct, fmtChange } = require('./report-pdf');
+const { fmtNum, fmtPct, fmtChange, fmtDuration, fmtDec1 } = require('./report-pdf');
 
 const SYSTEM_PROMPT =
   'Je schrijft een intern actiepunten-rapport voor Bojan, de beheerder van het White Vision dashboard. ' +
@@ -40,6 +40,8 @@ function fallbackActionItems(data) {
   note('Conversie totaal', k.conversionTotal);
   note('Bezoekers via Paid Ads', k.paidAds);
   note('Bezoekers via Social', k.social);
+  note('Engagementpercentage', k.engagementRate);
+  note("Pagina's per bezoek", k.pagesPerSession);
   if (!items.length) items.push('Geen grote uitschieters deze periode; de cijfers liggen in lijn met de vorige periode.');
   return items;
 }
@@ -61,8 +63,8 @@ async function generateActionItems(data, ranges, googleAds) {
   }
 }
 
-function kpiRow(label, kpi, fmt) {
-  const color = kpi.change > 0 ? '#2e7d32' : kpi.change < 0 ? '#c62828' : '#666666';
+function kpiRow(label, kpi, fmt, invert) {
+  const color = kpi.change === 0 ? '#666666' : (invert ? kpi.change < 0 : kpi.change > 0) ? '#2e7d32' : '#c62828';
   return (
     '<tr><td style="padding:6px 8px;border-bottom:1px solid #eee">' + label + '</td>' +
     '<td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right">' + fmt(kpi.current) + '</td>' +
@@ -90,6 +92,10 @@ function buildHtml(kind, data, ranges, result) {
     kpiRow('Conversie totaal', k.conversionTotal, fmtPct) +
     kpiRow('Bezoekers via Paid Ads', k.paidAds, fmtNum) +
     kpiRow('Bezoekers via Social', k.social, fmtNum) +
+    kpiRow('Gemiddelde bezoekduur', k.avgSessionDuration, fmtDuration) +
+    kpiRow("Pagina's per bezoek", k.pagesPerSession, fmtDec1) +
+    kpiRow('Engagementpercentage', k.engagementRate, fmtPct) +
+    kpiRow('Bouncepercentage', k.bounceRate, fmtPct, true) +
     '</table>' +
     (result.ai ? '' : '<p style="color:#c62828;font-size:12px">Let op: AI-analyse mislukt, dit is een automatisch gegenereerde standaardlijst.</p>') +
     '<p style="color:#999999;font-size:11px">Dit rapport wordt alleen gemaild, niet op het dashboard gepubliceerd.</p>' +

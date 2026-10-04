@@ -5,13 +5,13 @@
 // so the attachment is readable at a glance on a phone.
 const mailer = require('./mailer');
 const { nlDate } = require('./lib/dates');
-const { fmtNum, fmtPct, fmtChange } = require('./report-pdf');
+const { fmtNum, fmtPct, fmtChange, fmtDuration, fmtDec1 } = require('./report-pdf');
 
 const KIND_LABEL = { week: 'Weekrapport', month: 'Maandrapport' };
 const COMPARE_LABEL = { week: 'vorige week', month: 'vorige maand' };
 
-function kpiRow(label, kpi, fmt, compare) {
-  const color = kpi.change > 0 ? '#2e7d32' : kpi.change < 0 ? '#c62828' : '#666666';
+function kpiRow(label, kpi, fmt, compare, invert) {
+  const color = kpi.change === 0 ? '#666666' : (invert ? kpi.change < 0 : kpi.change > 0) ? '#2e7d32' : '#c62828';
   return (
     '<tr><td style="padding:6px 8px;border-bottom:1px solid #eee">' + label + '</td>' +
     '<td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right">' + fmt(kpi.current) + '</td>' +
@@ -47,6 +47,10 @@ function buildHtml(kind, data, ranges, opts) {
     kpiRow('Conversie totaal', k.conversionTotal, fmtPct, compare) +
     kpiRow('Bezoekers via Paid Ads', k.paidAds, fmtNum, compare) +
     kpiRow('Bezoekers via Social', k.social, fmtNum, compare) +
+    kpiRow('Gemiddelde bezoekduur', k.avgSessionDuration, fmtDuration, compare) +
+    kpiRow("Pagina's per bezoek", k.pagesPerSession, fmtDec1, compare) +
+    kpiRow('Engagementpercentage', k.engagementRate, fmtPct, compare) +
+    kpiRow('Bouncepercentage', k.bounceRate, fmtPct, compare, true) +
     '</table>' +
     (opts.aiUsed ? '' : '<p style="color:#c62828;font-size:12px">Let op: de AI-inleiding in de PDF is mislukt, daarvoor is standaardtekst gebruikt.</p>') +
     '<p style="color:#999999;font-size:11px">Dit rapport is ook toegevoegd aan het tabblad Rapporten van het White Vision dashboard.</p>' +
@@ -72,6 +76,10 @@ function buildText(kind, data, ranges, opts) {
     '  Conversie totaal:     ' + fmtPct(k.conversionTotal.current) + ' (' + fmtPct(k.conversionTotal.previous) + ', ' + fmtChange(k.conversionTotal.change) + ')',
     '  Bezoekers Paid Ads:   ' + fmtNum(k.paidAds.current) + ' (' + fmtNum(k.paidAds.previous) + ', ' + fmtChange(k.paidAds.change) + ')',
     '  Bezoekers Social:     ' + fmtNum(k.social.current) + ' (' + fmtNum(k.social.previous) + ', ' + fmtChange(k.social.change) + ')',
+    '  Gemiddelde bezoekduur:' + fmtDuration(k.avgSessionDuration.current) + ' (' + fmtDuration(k.avgSessionDuration.previous) + ', ' + fmtChange(k.avgSessionDuration.change) + ')',
+    "  Pagina's per bezoek:  " + fmtDec1(k.pagesPerSession.current) + ' (' + fmtDec1(k.pagesPerSession.previous) + ', ' + fmtChange(k.pagesPerSession.change) + ')',
+    '  Engagementpercentage: ' + fmtPct(k.engagementRate.current) + ' (' + fmtPct(k.engagementRate.previous) + ', ' + fmtChange(k.engagementRate.change) + ')',
+    '  Bouncepercentage:     ' + fmtPct(k.bounceRate.current) + ' (' + fmtPct(k.bounceRate.previous) + ', ' + fmtChange(k.bounceRate.change) + ')',
   ];
   if (!opts.aiUsed) {
     lines.push('', 'Let op: de AI-inleiding in de PDF is mislukt, daarvoor is standaardtekst gebruikt.');

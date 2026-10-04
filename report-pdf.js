@@ -17,8 +17,13 @@ const UP = '#2e7d32';
 const DOWN = '#c62828';
 
 const fmtNum = (n) => new Intl.NumberFormat('nl-NL').format(n);
+const fmtDec1 = (n) => n.toLocaleString('nl-NL', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const fmtPct = (n) => n.toLocaleString('nl-NL', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
 const fmtChange = (c) => (c > 0 ? '+' : '') + c + '%';
+const fmtDuration = (seconds) => {
+  const s = Math.max(0, Math.round(seconds));
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+};
 
 // opts: {
 //   docTitle, title, periodNote, compareNote, compareShort,
@@ -88,7 +93,7 @@ function renderReportPdf(data, ranges, intro, opts) {
         const y = doc.y;
         items.slice(i, i + cols).forEach((item, j) => {
           const x = left + j * (tileW + GAP);
-          const color = item.change > 0 ? UP : item.change < 0 ? DOWN : MUTED;
+          const color = item.change === 0 ? MUTED : item.change > 0 ? (item.invert ? DOWN : UP) : (item.invert ? UP : DOWN);
           doc.roundedRect(x, y, tileW, TILE_H, 6).fill(TILE_BG);
           doc.font('Body').fontSize(7.5).fillColor(MUTED)
             .text(item.label.toUpperCase(), x + 10, y + 10, { width: tileW - 20, characterSpacing: 0.4, lineBreak: false });
@@ -108,7 +113,7 @@ function renderReportPdf(data, ranges, intro, opts) {
       }
     };
     const k = data.kpis;
-    const tile = (label, key, fmt) => ({ label, fmt, current: k[key].current, previous: k[key].previous, change: k[key].change });
+    const tile = (label, key, fmt, invert) => ({ label, fmt, invert, current: k[key].current, previous: k[key].previous, change: k[key].change });
 
     heading('Kerncijfers');
     tiles([
@@ -132,6 +137,14 @@ function renderReportPdf(data, ranges, intro, opts) {
       tile('Betaalde bezoekers', 'conversionPaid', fmtPct),
       tile('Socials', 'conversionSocial', fmtPct),
     ], 3);
+
+    heading('Engagement');
+    tiles([
+      tile('Tijd per bezoek', 'avgSessionDuration', fmtDuration),
+      tile("Pagina's per bezoek", 'pagesPerSession', fmtDec1),
+      tile('Engagementpercentage', 'engagementRate', fmtPct),
+      tile('Bouncepercentage', 'bounceRate', fmtPct, true),
+    ], 4);
 
     // Simple table: columns = [{ label, width, align }]
     const table = (columns, rows) => {
@@ -233,4 +246,4 @@ function renderReportPdf(data, ranges, intro, opts) {
   });
 }
 
-module.exports = { renderReportPdf, fmtNum, fmtPct, fmtChange };
+module.exports = { renderReportPdf, fmtNum, fmtDec1, fmtPct, fmtChange, fmtDuration };
