@@ -604,13 +604,26 @@
     if (lastFocusedEl) lastFocusedEl.focus();
   }
 
+  // The title stays the keyboard-accessible trigger (Enter/Space)…
   document.querySelectorAll('.widget-title').forEach(function (el) {
-    el.addEventListener('click', function () { openInfoSidebar(el); });
     el.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         openInfoSidebar(el);
       }
+    });
+  });
+
+  // …while a click anywhere on the card that owns the title also opens it.
+  document.querySelectorAll('.kpi-tile, .chart-card, .table-card').forEach(function (card) {
+    var titleEl = card.querySelector('.widget-title');
+    if (!titleEl) return;
+
+    card.classList.add('is-clickable');
+    card.addEventListener('click', function (e) {
+      // Leave real controls (links, buttons, form fields) alone.
+      if (e.target.closest('a, button, input, select, textarea, label')) return;
+      openInfoSidebar(titleEl);
     });
   });
 

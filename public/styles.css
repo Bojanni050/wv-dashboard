@@ -634,6 +634,11 @@ tbody tr:hover td {
   transition: color 0.2s ease;
 }
 
+/* A card whose whole surface opens the widget info on click. */
+.is-clickable {
+  cursor: pointer;
+}
+
 .widget-title:hover,
 .widget-title:focus-visible {
   color: var(--gold);
