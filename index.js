@@ -198,6 +198,8 @@ function conversionRate(conversions, base) {
 
 // --- GA4 API calls ---
 
+// Engagement metrics come from GA4 (average session duration, pages per
+// session, engagement rate and bounce rate).
 async function fetchMetricsForRange(dateRange) {
   const [response] = await analyticsDataClient.runReport({
     property: `properties/${PROPERTY_ID}`,
@@ -207,15 +209,25 @@ async function fetchMetricsForRange(dateRange) {
       { name: 'totalUsers' },
       { name: 'newUsers' },
       { name: 'screenPageViews' },
+      { name: 'averageSessionDuration' },
+      { name: 'screenPageViewsPerSession' },
+      { name: 'engagementRate' },
+      { name: 'bounceRate' },
     ],
   });
 
   const row = response.rows?.[0]?.metricValues || [];
+  const num = (i) => parseFloat(row[i]?.value || '0') || 0;
+
   return {
     sessions: parseInt(row[0]?.value || '0', 10),
     users: parseInt(row[1]?.value || '0', 10),
     newUsers: parseInt(row[2]?.value || '0', 10),
     pageviews: parseInt(row[3]?.value || '0', 10),
+    avgSessionDuration: Math.round(num(4)),
+    pagesPerSession: Math.round(num(5) * 10) / 10,
+    engagementRate: Math.round(num(6) * 1000) / 10,
+    bounceRate: Math.round(num(7) * 1000) / 10,
   };
 }
 
@@ -470,6 +482,26 @@ async function buildAnalytics(ranges, rangeParam, compareParam) {
         current: conversionSocial,
         previous: prevConversionSocial,
         change: pctChange(conversionSocial, prevConversionSocial),
+      },
+      avgSessionDuration: {
+        current: currentMetrics.avgSessionDuration,
+        previous: previousMetrics.avgSessionDuration,
+        change: pctChange(currentMetrics.avgSessionDuration, previousMetrics.avgSessionDuration),
+      },
+      pagesPerSession: {
+        current: currentMetrics.pagesPerSession,
+        previous: previousMetrics.pagesPerSession,
+        change: pctChange(currentMetrics.pagesPerSession, previousMetrics.pagesPerSession),
+      },
+      engagementRate: {
+        current: currentMetrics.engagementRate,
+        previous: previousMetrics.engagementRate,
+        change: pctChange(currentMetrics.engagementRate, previousMetrics.engagementRate),
+      },
+      bounceRate: {
+        current: currentMetrics.bounceRate,
+        previous: previousMetrics.bounceRate,
+        change: pctChange(currentMetrics.bounceRate, previousMetrics.bounceRate),
       },
     },
     channels,

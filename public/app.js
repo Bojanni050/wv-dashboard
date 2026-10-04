@@ -73,19 +73,40 @@
     return n.toLocaleString('nl-NL', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
   }
 
-  function formatChangeEl(el, change) {
+  // Average session duration comes from GA4 in seconds; show it as m:ss.
+  function formatDuration(seconds) {
+    var s = Math.max(0, Math.round(seconds));
+    var m = Math.floor(s / 60);
+    return m + ':' + String(s % 60).padStart(2, '0');
+  }
+
+  function formatPages(n) {
+    return n.toLocaleString('nl-NL', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  }
+
+  // Which direction is "good" for a tile. Bounce rate is inverted: a rise is bad.
+  function changeClass(change, invert) {
+    if (change > 0) return invert ? 'down' : 'up';
+    if (change < 0) return invert ? 'up' : 'down';
+    return 'neutral';
+  }
+
+  function formatChangeEl(el, change, invert) {
+    if (change === null || change === undefined) {
+      el.textContent = '';
+      el.classList.remove('up', 'down', 'neutral');
+      return;
+    }
     el.textContent = formatPct(change) + ' vs ' + COMPARE_LABELS[currentCompare];
     el.classList.remove('up', 'down', 'neutral');
-    if (change > 0) el.classList.add('up');
-    else if (change < 0) el.classList.add('down');
-    else el.classList.add('neutral');
+    el.classList.add(changeClass(change, invert));
   }
 
   // Sets a KPI tile's main value, with the previous-period value appended
   // in parentheses (colored to match the direction of change).
-  function setKpiValue(elId, current, previous, change, formatFn) {
+  function setKpiValue(elId, current, previous, change, formatFn, invert) {
     var el = document.getElementById(elId);
-    var cls = change > 0 ? 'up' : change < 0 ? 'down' : 'neutral';
+    var cls = changeClass(change, invert);
     el.innerHTML = escapeHtml(formatFn(current)) + ' <span class="kpi-prev ' + cls + '">(' + escapeHtml(formatFn(previous)) + ')</span>';
   }
 
@@ -151,6 +172,19 @@
 
     setKpiValue('kpi-conv-social', k.conversionSocial.current, k.conversionSocial.previous, k.conversionSocial.change, formatConversion);
     formatChangeEl(document.getElementById('kpi-conv-social-change'), k.conversionSocial.change);
+
+    // Engagement
+    setKpiValue('kpi-engagement-duration', k.avgSessionDuration.current, k.avgSessionDuration.previous, k.avgSessionDuration.change, formatDuration);
+    formatChangeEl(document.getElementById('kpi-engagement-duration-change'), k.avgSessionDuration.change);
+
+    setKpiValue('kpi-engagement-pages', k.pagesPerSession.current, k.pagesPerSession.previous, k.pagesPerSession.change, formatPages);
+    formatChangeEl(document.getElementById('kpi-engagement-pages-change'), k.pagesPerSession.change);
+
+    setKpiValue('kpi-engagement-rate', k.engagementRate.current, k.engagementRate.previous, k.engagementRate.change, formatConversion);
+    formatChangeEl(document.getElementById('kpi-engagement-rate-change'), k.engagementRate.change);
+
+    setKpiValue('kpi-engagement-bounce', k.bounceRate.current, k.bounceRate.previous, k.bounceRate.change, formatConversion, true);
+    formatChangeEl(document.getElementById('kpi-engagement-bounce-change'), k.bounceRate.change, true);
   }
 
   // --- Line chart ---
@@ -528,6 +562,10 @@
     conversionTotal: 'Percentage van alle gebruikers dat een offerteaanvraag heeft ingediend: offertes gedeeld door totaal aantal gebruikers.',
     conversionPaid: 'Conversieratio van bezoekers via betaalde ads: offerteaanvragen via betaalde kanalen gedeeld door sessies via betaalde kanalen.',
     conversionSocial: 'Conversieratio van bezoekers via organic social: offerteaanvragen via Organic Social gedeeld door sessies via Organic Social.',
+    avgSessionDuration: 'Gemiddelde tijd die een bezoeker per sessie op de site doorbrengt (GA4 averageSessionDuration), weergegeven als minuten:seconden.',
+    pagesPerSession: 'Gemiddeld aantal paginaweergaven per sessie (GA4 screenPageViewsPerSession).',
+    engagementRate: 'Percentage sessies dat als "engaged" telt: langer dan 10 seconden actief, een conversie-event of minimaal 2 paginaweergaven.',
+    bounceRate: 'Percentage sessies dat niet als engaged telt (GA4 bounceRate). Let op: een stijging is hier ongunstig.',
     dailySessions: 'Dagelijks aantal sessies in de geselecteerde periode, vergeleken met dezelfde periode ervoor.',
     channelDonut: 'Verdeling van sessies over de GA4-kanalen (Direct, Organic Search, Paid Search, Referral, etc.) in de geselecteerde periode.',
     offerteByPage: 'Aantal offerteaanvragen per pagina waarop het formulier is ingevuld.',

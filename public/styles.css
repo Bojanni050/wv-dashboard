@@ -439,6 +439,14 @@ body.is-locked .dashboard {
   grid-template-columns: repeat(3, 1fr);
 }
 
+.section-heading {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 14px;
+}
+
 .kpi-tile {
   background: var(--surface);
   border: 1px solid var(--border);
