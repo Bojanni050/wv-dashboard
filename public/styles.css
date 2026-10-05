@@ -951,3 +951,9 @@ tbody tr:hover td {
 @media (prefers-reduced-motion: reduce) {
   .ai-explain-avatar img { animation: none; }
 }
+
+.kpi-detail {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}

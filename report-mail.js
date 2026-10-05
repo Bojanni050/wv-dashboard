@@ -10,6 +10,8 @@ const { fmtNum, fmtPct, fmtChange, fmtDuration, fmtDec1 } = require('./report-pd
 const KIND_LABEL = { week: 'Weekrapport', month: 'Maandrapport' };
 const COMPARE_LABEL = { week: 'vorige week', month: 'vorige maand' };
 
+const SOCIALS = [['facebook', 'Facebook'], ['instagram', 'Instagram'], ['linkedin', 'LinkedIn']];
+
 function kpiRow(label, kpi, fmt, compare, invert) {
   const color = kpi.change === 0 ? '#666666' : (invert ? kpi.change < 0 : kpi.change > 0) ? '#2e7d32' : '#c62828';
   return (
@@ -45,6 +47,8 @@ function buildHtml(kind, data, ranges, opts) {
     kpiRow('Paginaweergaven', k.pageviews, fmtNum, compare) +
     kpiRow('Offerteaanvragen', k.offertes, fmtNum, compare) +
     kpiRow('Conversie totaal', k.conversionTotal, fmtPct, compare) +
+    kpiRow('Conversie betaalde bezoekers', k.conversionPaid, fmtPct, compare) +
+    SOCIALS.map(([key, label]) => kpiRow('Conversie ' + label, data.socialPlatforms[key].conversion, fmtPct, compare)).join('') +
     kpiRow('Bezoekers via Paid Ads', k.paidAds, fmtNum, compare) +
     kpiRow('Bezoekers via Social', k.social, fmtNum, compare) +
     kpiRow('Gemiddelde bezoekduur', k.avgSessionDuration, fmtDuration, compare) +
@@ -74,6 +78,11 @@ function buildText(kind, data, ranges, opts) {
     '  Paginaweergaven:      ' + fmtNum(k.pageviews.current) + ' (' + fmtNum(k.pageviews.previous) + ', ' + fmtChange(k.pageviews.change) + ')',
     '  Offerteaanvragen:     ' + fmtNum(k.offertes.current) + ' (' + fmtNum(k.offertes.previous) + ', ' + fmtChange(k.offertes.change) + ')',
     '  Conversie totaal:     ' + fmtPct(k.conversionTotal.current) + ' (' + fmtPct(k.conversionTotal.previous) + ', ' + fmtChange(k.conversionTotal.change) + ')',
+    '  Conversie betaald:    ' + fmtPct(k.conversionPaid.current) + ' (' + fmtPct(k.conversionPaid.previous) + ', ' + fmtChange(k.conversionPaid.change) + ')',
+    ...SOCIALS.map(([key, label]) => {
+      const c = data.socialPlatforms[key].conversion;
+      return ('  Conversie ' + label + ':').padEnd(24) + fmtPct(c.current) + ' (' + fmtPct(c.previous) + ', ' + fmtChange(c.change) + ')';
+    }),
     '  Bezoekers Paid Ads:   ' + fmtNum(k.paidAds.current) + ' (' + fmtNum(k.paidAds.previous) + ', ' + fmtChange(k.paidAds.change) + ')',
     '  Bezoekers Social:     ' + fmtNum(k.social.current) + ' (' + fmtNum(k.social.previous) + ', ' + fmtChange(k.social.change) + ')',
     '  Gemiddelde bezoekduur:' + fmtDuration(k.avgSessionDuration.current) + ' (' + fmtDuration(k.avgSessionDuration.previous) + ', ' + fmtChange(k.avgSessionDuration.change) + ')',

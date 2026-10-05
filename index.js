@@ -246,79 +246,154 @@ async function fetchChannels(dateRange) {
   }));
 }
 
-async function fetchOfferteByPage(dateRange) {
-  const [response] = await analyticsDataClient.runReport({
-    property: `properties/${PROPERTY_ID}`,
-    dateRanges: [{ startDate: dateRange.start, endDate: dateRange.end }],
-    dimensions: [{ name: 'pagePath' }],
-    metrics: [{ name: 'eventCount' }],
-    dimensionFilter: {
-      filter: {
-        fieldName: 'eventName',
-        stringFilter: { matchType: 'EXACT', value: 'gforms_submission' },
-      },
-    },
-    orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }],
+// --- Offerte (quote request) counting ---
+//
+// A "conversion" is a session in which the quote form was submitted. We count
+// unique sessions, not events: the tracking fires the success events 2-4 times
+// per submission (form_submit and offerte_form_succes double-fire), and
+// generate_lead also fires on non-form interactions, so event counts overstate
+// conversions.
+//
+// The event that marks a submission also changed over time. The dedicated
+// gforms_submission event only exists from OFFERTE_EVENT_SWITCH_DATE; before
+// that, form_submit is the only event that was measured the whole year. Ranges
+// that span the switch are queried in two parts and added together, so periods
+// before mid-September no longer show 0 offertes.
+const OFFERTE_EVENT = 'gforms_submission';
+const LEGACY_OFFERTE_EVENT = 'form_submit';
+const OFFERTE_EVENT_SWITCH_DATE = '2026-09-15';
+const LEGACY_LAST_DATE = '2026-09-14';
+
+function offerteEventParts(dateRange) {
+  const parts = [];
+  if (dateRange.start <= LEGACY_LAST_DATE) {
+    parts.push({
+      event: LEGACY_OFFERTE_EVENT,
+      start: dateRange.start,
+      end: dateRange.end < LEGACY_LAST_DATE ? dateRange.end : LEGACY_LAST_DATE,
+    });
+  }
+  if (dateRange.end >= OFFERTE_EVENT_SWITCH_DATE) {
+    parts.push({
+      event: OFFERTE_EVENT,
+      start: dateRange.start > OFFERTE_EVENT_SWITCH_DATE ? dateRange.start : OFFERTE_EVENT_SWITCH_DATE,
+      end: dateRange.end,
+    });
+  }
+  return parts;
+}
+
+// Sessions with a quote submission, grouped by one GA4 dimension. Returns
+// [{ key, count }] sorted by count, descending.
+async function fetchOfferteSessions(dateRange, dimension, extraFilters = []) {
+  const parts = offerteEventParts(dateRange);
+  const results = await Promise.all(
+    parts.map(async (part) => {
+      const [response] = await analyticsDataClient.runReport({
+        property: `properties/${PROPERTY_ID}`,
+        dateRanges: [{ startDate: part.start, endDate: part.end }],
+        dimensions: [{ name: dimension }],
+        metrics: [{ name: 'sessions' }],
+        dimensionFilter: {
+          andGroup: {
+            expressions: [
+              {
+                filter: {
+                  fieldName: 'eventName',
+                  stringFilter: { matchType: 'EXACT', value: part.event },
+                },
+              },
+              ...extraFilters,
+            ],
+          },
+        },
+      });
+      return response.rows || [];
+    })
+  );
+
+  const totals = new Map();
+  results.flat().forEach((row) => {
+    const key = row.dimensionValues[0].value;
+    totals.set(key, (totals.get(key) || 0) + parseInt(row.metricValues[0].value, 10));
   });
 
-  return (response.rows || []).map((row) => ({
-    page: row.dimensionValues[0].value,
-    count: parseInt(row.metricValues[0].value, 10),
-  }));
+  return [...totals.entries()]
+    .map(([key, count]) => ({ key, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+async function fetchOfferteByPage(dateRange) {
+  const rows = await fetchOfferteSessions(dateRange, 'pagePath');
+  return rows.map((r) => ({ page: r.key, count: r.count }));
 }
 
 async function fetchOfferteByChannel(dateRange) {
-  const [response] = await analyticsDataClient.runReport({
-    property: `properties/${PROPERTY_ID}`,
-    dateRanges: [{ startDate: dateRange.start, endDate: dateRange.end }],
-    dimensions: [{ name: 'sessionDefaultChannelGroup' }],
-    metrics: [{ name: 'eventCount' }],
-    dimensionFilter: {
-      filter: {
-        fieldName: 'eventName',
-        stringFilter: { matchType: 'EXACT', value: 'gforms_submission' },
-      },
-    },
-    orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }],
-  });
-
-  return (response.rows || []).map((row) => ({
-    channel: row.dimensionValues[0].value,
-    count: parseInt(row.metricValues[0].value, 10),
-  }));
+  const rows = await fetchOfferteSessions(dateRange, 'sessionDefaultChannelGroup');
+  return rows.map((r) => ({ channel: r.key, count: r.count }));
 }
 
 async function fetchOfferteByCampaign(dateRange) {
-  const [response] = await analyticsDataClient.runReport({
-    property: `properties/${PROPERTY_ID}`,
-    dateRanges: [{ startDate: dateRange.start, endDate: dateRange.end }],
-    dimensions: [{ name: 'sessionCampaignName' }],
-    metrics: [{ name: 'eventCount' }],
-    dimensionFilter: {
-      andGroup: {
-        expressions: [
-          {
-            filter: {
-              fieldName: 'eventName',
-              stringFilter: { matchType: 'EXACT', value: 'gforms_submission' },
-            },
-          },
-          {
-            filter: {
-              fieldName: 'sessionDefaultChannelGroup',
-              stringFilter: { matchType: 'BEGINS_WITH', value: 'Paid' },
-            },
-          },
-        ],
+  const rows = await fetchOfferteSessions(dateRange, 'sessionCampaignName', [
+    {
+      filter: {
+        fieldName: 'sessionDefaultChannelGroup',
+        stringFilter: { matchType: 'BEGINS_WITH', value: 'Paid' },
       },
     },
-    orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }],
+  ]);
+  return rows.map((r) => ({ campaign: r.key, count: r.count }));
+}
+
+// --- Conversion per social platform ---
+
+const SOCIAL_PLATFORMS = ['facebook', 'instagram', 'linkedin'];
+
+// Maps a GA4 sessionSource (ig, l.facebook.com, linkedin.com, ...) to one
+// of the tracked platforms, or null for any other source.
+function socialPlatform(source) {
+  const s = (source || '').toLowerCase();
+  if (s.includes('facebook') || s === 'fb') return 'facebook';
+  if (s.includes('instagram') || s === 'ig') return 'instagram';
+  if (s.includes('linkedin') || s === 'lnkd.in') return 'linkedin';
+  return null;
+}
+
+const ORGANIC_SOCIAL_FILTER = {
+  filter: {
+    fieldName: 'sessionDefaultChannelGroup',
+    stringFilter: { matchType: 'EXACT', value: 'Organic Social' },
+  },
+};
+
+// Sessions and quote submissions from Organic Social, split per platform.
+async function fetchSocialByPlatform(dateRange) {
+  const [[sessionsResponse], offerteRows] = await Promise.all([
+    analyticsDataClient.runReport({
+      property: `properties/${PROPERTY_ID}`,
+      dateRanges: [{ startDate: dateRange.start, endDate: dateRange.end }],
+      dimensions: [{ name: 'sessionSource' }],
+      metrics: [{ name: 'sessions' }],
+      dimensionFilter: ORGANIC_SOCIAL_FILTER,
+    }),
+    fetchOfferteSessions(dateRange, 'sessionSource', [ORGANIC_SOCIAL_FILTER]),
+  ]);
+
+  const result = {};
+  SOCIAL_PLATFORMS.forEach((p) => {
+    result[p] = { sessions: 0, offertes: 0 };
   });
 
-  return (response.rows || []).map((row) => ({
-    campaign: row.dimensionValues[0].value,
-    count: parseInt(row.metricValues[0].value, 10),
-  }));
+  (sessionsResponse.rows || []).forEach((row) => {
+    const platform = socialPlatform(row.dimensionValues[0].value);
+    if (platform) result[platform].sessions += parseInt(row.metricValues[0].value, 10);
+  });
+  offerteRows.forEach((r) => {
+    const platform = socialPlatform(r.key);
+    if (platform) result[platform].offertes += r.count;
+  });
+
+  return result;
 }
 
 async function fetchTopPages(dateRange) {
@@ -388,6 +463,8 @@ async function buildAnalytics(ranges, rangeParam, compareParam) {
     dailySessions,
     dailySessionsPrev,
     topPages,
+    socialByPlatform,
+    previousSocialByPlatform,
   ] = await Promise.all([
     fetchMetricsForRange(ranges.current),
     fetchMetricsForRange(ranges.previous),
@@ -400,13 +477,15 @@ async function buildAnalytics(ranges, rangeParam, compareParam) {
     fetchDailySessions(ranges.current, daysInRange(ranges.current)),
     fetchDailySessions(ranges.previous, daysInRange(ranges.previous)),
     fetchTopPages(ranges.current),
+    fetchSocialByPlatform(ranges.current),
+    fetchSocialByPlatform(ranges.previous),
   ]);
 
-  const offerteCount = offerteByPage.reduce((sum, r) => sum + r.count, 0);
-
-  // Fetch previous period offerte count
-  const prevOfferte = await fetchOfferteByPage(ranges.previous);
-  const prevOfferteCount = prevOfferte.reduce((sum, r) => sum + r.count, 0);
+  // Channel is session-scoped, so these rows are unique sessions and their
+  // sum is the number of converting sessions (page rows could count one
+  // session twice).
+  const offerteCount = offerteByChannel.reduce((sum, r) => sum + r.count, 0);
+  const prevOfferteCount = previousOfferteByChannel.reduce((sum, r) => sum + r.count, 0);
 
   const channelGroups = groupByChannel(channels, 'sessions');
   const prevChannelGroups = groupByChannel(previousChannels, 'sessions');
@@ -421,6 +500,19 @@ async function buildAnalytics(ranges, rangeParam, compareParam) {
 
   const conversionSocial = conversionRate(offerteChannelGroups.social, channelGroups.social);
   const prevConversionSocial = conversionRate(prevOfferteChannelGroups.social, prevChannelGroups.social);
+
+  const socialPlatforms = {};
+  SOCIAL_PLATFORMS.forEach((p) => {
+    const cur = socialByPlatform[p];
+    const prev = previousSocialByPlatform[p];
+    const rate = conversionRate(cur.offertes, cur.sessions);
+    const prevRate = conversionRate(prev.offertes, prev.sessions);
+    socialPlatforms[p] = {
+      sessions: cur.sessions,
+      offertes: cur.offertes,
+      conversion: { current: rate, previous: prevRate, change: pctChange(rate, prevRate) },
+    };
+  });
 
   return {
     range: rangeParam,
@@ -504,6 +596,7 @@ async function buildAnalytics(ranges, rangeParam, compareParam) {
         change: pctChange(currentMetrics.bounceRate, previousMetrics.bounceRate),
       },
     },
+    socialPlatforms,
     channels,
     offerteByPage,
     offerteByChannel,

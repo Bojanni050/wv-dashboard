@@ -173,6 +173,15 @@
     setKpiValue('kpi-conv-social', k.conversionSocial.current, k.conversionSocial.previous, k.conversionSocial.change, formatConversion);
     formatChangeEl(document.getElementById('kpi-conv-social-change'), k.conversionSocial.change);
 
+    // Conversion per social platform
+    ['facebook', 'instagram', 'linkedin'].forEach(function (p) {
+      var s = data.socialPlatforms[p];
+      setKpiValue('kpi-conv-' + p, s.conversion.current, s.conversion.previous, s.conversion.change, formatConversion);
+      formatChangeEl(document.getElementById('kpi-conv-' + p + '-change'), s.conversion.change);
+      document.getElementById('kpi-conv-' + p + '-detail').textContent =
+        formatNumber(s.offertes) + ' offertes · ' + formatNumber(s.sessions) + ' sessies';
+    });
+
     // Engagement
     setKpiValue('kpi-engagement-duration', k.avgSessionDuration.current, k.avgSessionDuration.previous, k.avgSessionDuration.change, formatDuration);
     formatChangeEl(document.getElementById('kpi-engagement-duration-change'), k.avgSessionDuration.change);
@@ -554,14 +563,17 @@
     sessions: 'Aantal sessies (bezoeken) op de website in de geselecteerde periode, gemeten via Google Analytics 4.',
     users: 'Aantal unieke gebruikers dat de website heeft bezocht in de geselecteerde periode.',
     pageviews: 'Totaal aantal paginaweergaven in de geselecteerde periode.',
-    offertes: 'Aantal succesvolle offerteaanvragen ("gforms_submission" events) in de geselecteerde periode.',
+    offertes: 'Aantal sessies waarin een offerteaanvraag is ingediend. Per sessie maximaal één keer geteld, omdat de formulier-events soms meerdere keren vuren. Vóór 15 september 2026 is het event "form_submit" gebruikt, daarna "gforms_submission".',
     paidAds: 'Aantal sessies via betaalde advertenties: elk GA4-kanaal dat begint met "Paid", zoals Paid Search en Paid Social.',
     social: 'Aantal sessies via organisch social verkeer (Organic Social kanaal) — dus niet via betaalde social ads.',
     search: 'Aantal sessies via organische zoekresultaten (Organic Search kanaal).',
     overig: 'Aantal sessies via overige kanalen: Direct, Referral, Organic Video en niet-geclassificeerd verkeer.',
     conversionTotal: 'Percentage van alle gebruikers dat een offerteaanvraag heeft ingediend: offertes gedeeld door totaal aantal gebruikers.',
-    conversionPaid: 'Conversieratio van bezoekers via betaalde ads: offerteaanvragen via betaalde kanalen gedeeld door sessies via betaalde kanalen.',
+    conversionPaid: 'Conversieratio van bezoekers via betaalde ads: sessies met een offerteaanvraag via betaalde kanalen gedeeld door sessies via betaalde kanalen. Vóór 15 september 2026 wordt hiervoor "form_submit" gebruikt (per sessie ontdubbeld), daarna "gforms_submission".',
     conversionSocial: 'Conversieratio van bezoekers via organic social: offerteaanvragen via Organic Social gedeeld door sessies via Organic Social.',
+    conversionFacebook: 'Conversieratio van bezoekers via Facebook (organic): offerteaanvragen gedeeld door sessies vanuit Facebook.',
+    conversionInstagram: 'Conversieratio van bezoekers via Instagram (organic): offerteaanvragen gedeeld door sessies vanuit Instagram.',
+    conversionLinkedin: 'Conversieratio van bezoekers via LinkedIn (organic): offerteaanvragen gedeeld door sessies vanuit LinkedIn.',
     avgSessionDuration: 'Gemiddelde tijd die een bezoeker per sessie op de site doorbrengt (GA4 averageSessionDuration), weergegeven als minuten:seconden.',
     pagesPerSession: 'Gemiddeld aantal paginaweergaven per sessie (GA4 screenPageViewsPerSession).',
     engagementRate: 'Percentage sessies dat als "engaged" telt: langer dan 10 seconden actief, een conversie-event of minimaal 2 paginaweergaven.',

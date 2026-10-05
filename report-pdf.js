@@ -138,6 +138,17 @@ function renderReportPdf(data, ranges, intro, opts) {
       tile('Socials', 'conversionSocial', fmtPct),
     ], 3);
 
+    heading('Conversie per social');
+    const socialTile = (label, platform) => {
+      const c = data.socialPlatforms[platform].conversion;
+      return { label, fmt: fmtPct, current: c.current, previous: c.previous, change: c.change };
+    };
+    tiles([
+      socialTile('Facebook', 'facebook'),
+      socialTile('Instagram', 'instagram'),
+      socialTile('LinkedIn', 'linkedin'),
+    ], 3);
+
     heading('Engagement');
     tiles([
       tile('Tijd per bezoek', 'avgSessionDuration', fmtDuration),
