@@ -766,15 +766,25 @@ async function readGoogleAds(range) {
 }
 
 app.get('/api/google-ads', basicAuth, async (req, res) => {
-  const from = String(req.query.from || '').trim();
-  const to = String(req.query.to || '').trim();
-  const range =
-    /^\d{4}-\d{2}-\d{2}$/.test(from) && /^\d{4}-\d{2}-\d{2}$/.test(to) ? { start: from, end: to } : undefined;
+  const { rangeParam, customStart, customEnd } = resolveRangeParam(req.query);
+  const compareParam = VALID_COMPARE.includes(req.query.compare) ? req.query.compare : 'previous';
+
   try {
-    const week = await readGoogleAds(range);
+    const ranges = getRanges(rangeParam, compareParam, customStart, customEnd);
+    const [current, previous] = await Promise.all([
+      readGoogleAds(ranges.current),
+      readGoogleAds(ranges.previous),
+    ]);
+
+    const changes = {
+      clicks: pctChange(current.clicks, previous.clicks),
+      impressions: pctChange(current.impressions, previous.impressions),
+      costOfClicks: pctChange(current.costOfClicks, previous.costOfClicks),
+      costPerClick: pctChange(current.costPerClick, previous.costPerClick),
+    };
 
     // Running vs closed campaigns come from the lifetime overview. A failure
-    // here only empties those two tables; the week KPI's still render.
+    // here only empties those two tables; the KPI's still render.
     let activeCampaigns = [];
     let closedCampaigns = [];
     if (googleAds.isConfigured()) {
@@ -790,7 +800,19 @@ app.get('/api/google-ads', basicAuth, async (req, res) => {
       }
     }
 
-    res.json(Object.assign({}, week, { activeCampaigns, closedCampaigns }));
+    res.json(
+      Object.assign({}, current, {
+        previous: {
+          clicks: previous.clicks,
+          impressions: previous.impressions,
+          costOfClicks: previous.costOfClicks,
+          costPerClick: previous.costPerClick,
+        },
+        changes,
+        activeCampaigns,
+        closedCampaigns,
+      })
+    );
   } catch (err) {
     console.error('Google Ads endpoint error:', err.message);
     res.status(500).json({ error: 'Google Ads-gegevens ophalen mislukt' });

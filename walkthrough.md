@@ -55,3 +55,26 @@
   getest met Bo's naslagcijfers (Campagne 1 → afgesloten, Campagne 2 → lopend,
   totalen en CPC kloppen). Nog te valideren op de VPS: dat Windsor
   `campaign_status`/`start_date`/`end_date` daadwerkelijk teruggeeft.
+
+## 2026-10-09 (Google Ads-KPI's volgen de periodeselector)
+
+- Findings: de bovenste Google Ads-tegels stonden vast op de afgelopen week,
+  terwijl de Paid Ads/Conversie-tegels en de rest van het dashboard de
+  periodeselector volgden. Bo wilde die twee Paid Ads-tegels boven de
+  campagnetabellen, en de bovenste vijf tegels allemaal aan de geselecteerde
+  periode laten hangen.
+- Conclusions: `GET /api/google-ads` accepteert nu dezelfde `range`/`compare`/
+  `start`/`end`-parameters als `/api/analytics` (via de bestaande
+  `resolveRangeParam` + `getRanges`), haalt de huidige én de vergelijkingsperiode
+  op en geeft `previous` + `changes` terug, zodat de drie Windsor-tegels dezelfde
+  "(vorige) + %"-opmaak krijgen als de rest. De campagnetabellen blijven
+  levensduur-totalen en bewegen dus bewust niet mee met de periode.
+- Actions: `index.js` — Google Ads-endpoint periode-bewust, `pctChange` op
+  klikken/kosten/CPC, `previous`/`changes` in de respons; `public/index.html` —
+  Paid Ads/Conversie-blok verplaatst naar boven de campagnetabellen, `kpi-change`
+  toegevoegd aan de drie Windsor-tegels; `public/app.js` — `loadGoogleAds(range,
+  compare, customRange)`, `setKpiValue`/`formatChangeEl` voor de drie tegels,
+  `gaRangeLabel()` voor de periode in de ondertitel, aanroep vanuit `load()` en
+  de lazy `googleAdsLoaded`-guard verwijderd; README bijgewerkt. `node --check`
+  op alle gewijzigde JS geslaagd. Nog te valideren op de VPS: dat de Windsor-
+  cijfers per periode kloppen t.o.v. Google Ads.

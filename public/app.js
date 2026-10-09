@@ -548,6 +548,7 @@
       renderTable(data);
       updateLastRefreshed();
       loadExplanation();
+      loadGoogleAds(range, compare, customRange);
     } catch (err) {
       console.error('Load error:', err);
       var errorRow = '<tr><td colspan="2" class="empty-row">Fout bij laden van gegevens</td></tr>';
@@ -583,9 +584,9 @@
     offerteByPage: 'Aantal offerteaanvragen per pagina waarop het formulier is ingevuld.',
     offerteByChannel: 'Aantal offerteaanvragen per GA4-kanaal (Direct, Organic Search, Paid Search, Paid Social, Referral, etc.). Hiermee zie je direct of bezoekers die via een advertentie binnenkwamen ook daadwerkelijk het formulier hebben ingevuld.',
     offerteByCampaign: 'Aantal offerteaanvragen via betaalde ads, gegroepeerd per campagnenaam (utm_campaign). Toont "(referral)" of "(not set)" wanneer de advertentie niet getagd is.',
-    gaClicks: 'Aantal klikken op de Google Ads-campagnes in de afgelopen week (maandag t/m zondag). Deze data komt automatisch via Windsor.ai.',
-    gaCostOfClicks: 'Totale advertentiekosten van de Google Ads-klikken in de afgelopen week. Deze data komt automatisch via Windsor.ai.',
-    gaCostPerClick: 'Gemiddelde kost per klik (CPC) op de Google Ads-campagnes in de afgelopen week. Deze data komt automatisch via Windsor.ai.',
+    gaClicks: 'Aantal klikken op de Google Ads-campagnes in de geselecteerde periode. Deze data komt automatisch via Windsor.ai.',
+    gaCostOfClicks: 'Totale advertentiekosten van de Google Ads-klikken in de geselecteerde periode. Deze data komt automatisch via Windsor.ai.',
+    gaCostPerClick: 'Gemiddelde kost per klik (CPC) op de Google Ads-campagnes in de geselecteerde periode. Deze data komt automatisch via Windsor.ai.',
     gaActiveCampaigns: 'Google Ads-campagnes die nu lopen, met de totalen sinds de start van de campagne. Opgehaald via Windsor.ai.',
     gaClosedCampaigns: 'Google Ads-campagnes die niet meer lopen (gepauzeerd, verwijderd of afgelopen), met de totalen over hun volledige looptijd. Opgehaald via Windsor.ai.',
   };
@@ -725,7 +726,6 @@
 
   // --- Tabs ---
   var reportsLoaded = false;
-  var googleAdsLoaded = false;
   var aiLoaded = false;
 
   document.querySelectorAll('.tab-btn').forEach(function (btn) {
@@ -747,10 +747,6 @@
       if (tab === 'reports' && !reportsLoaded) {
         reportsLoaded = true;
         loadReports();
-      }
-      if (tab === 'googleads' && !googleAdsLoaded) {
-        googleAdsLoaded = true;
-        loadGoogleAds();
       }
     });
   });
@@ -921,10 +917,6 @@
   });
 
   // --- Google Ads ---
-  function formatShortDate(dateStr) {
-    return new Date(dateStr + 'T12:00:00Z').toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', timeZone: 'UTC' });
-  }
-
   function formatDateNL(dateStr, withYear) {
     return new Date(dateStr + 'T12:00:00Z').toLocaleDateString('nl-NL', {
       day: 'numeric',
@@ -964,35 +956,58 @@
       .join('');
   }
 
-  async function loadGoogleAds() {
+  function gaRangeLabel(range, customRange) {
+    if (range === 'custom' && customRange) return shortDate(customRange.start) + ' – ' + shortDate(customRange.end);
+    return capitalize(RANGE_LABELS[range] || 'deze periode');
+  }
+
+  async function loadGoogleAds(range, compare, customRange) {
+    range = range || currentRange;
+    compare = compare || currentCompare;
     try {
-      var res = await apiFetch('/api/google-ads', { headers: { Accept: 'application/json' } });
+      var url = '/api/google-ads?range=' + range + '&compare=' + compare;
+      if (range === 'custom' && customRange) {
+        url += '&start=' + customRange.start + '&end=' + customRange.end;
+      }
+      var res = await apiFetch(url, { headers: { Accept: 'application/json' } });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       var data = await res.json();
 
       var hasData = Boolean(data.updatedAt);
-      document.getElementById('ga-clicks').textContent = hasData ? formatNumber(data.clicks) : '—';
-      document.getElementById('ga-cost').textContent = hasData ? formatCurrency(data.costOfClicks) : '—';
-      document.getElementById('ga-cpc').textContent = hasData ? formatCurrency(data.costPerClick) : '—';
+      if (hasData) {
+        var prev = data.previous || {};
+        var ch = data.changes || {};
+        setKpiValue('ga-clicks', data.clicks, prev.clicks || 0, ch.clicks || 0, formatNumber);
+        formatChangeEl(document.getElementById('ga-clicks-change'), ch.clicks);
+        setKpiValue('ga-cost', data.costOfClicks, prev.costOfClicks || 0, ch.costOfClicks || 0, formatCurrency);
+        formatChangeEl(document.getElementById('ga-cost-change'), ch.costOfClicks);
+        setKpiValue('ga-cpc', data.costPerClick, prev.costPerClick || 0, ch.costPerClick || 0, formatCurrency);
+        formatChangeEl(document.getElementById('ga-cpc-change'), ch.costPerClick);
+      } else {
+        document.getElementById('ga-clicks').textContent = '—';
+        document.getElementById('ga-cost').textContent = '—';
+        document.getElementById('ga-cpc').textContent = '—';
+        formatChangeEl(document.getElementById('ga-clicks-change'), null);
+        formatChangeEl(document.getElementById('ga-cost-change'), null);
+        formatChangeEl(document.getElementById('ga-cpc-change'), null);
+      }
 
       renderCampaignTable('gaActiveCampaignTableBody', data.activeCampaigns, 'Geen lopende campagnes', true);
       renderCampaignTable('gaClosedCampaignTableBody', data.closedCampaigns, 'Geen afgesloten campagnes', false);
 
       var updatedEl = document.getElementById('googleAdsUpdatedAt');
-      if (hasData) {
-        var rangeText = data.from && data.to
-          ? 'Week van ' + formatShortDate(data.from) + ' t/m ' + formatShortDate(data.to) + ' · '
-          : '';
-        updatedEl.textContent = rangeText + 'Laatst bijgewerkt: ' +
-          new Date(data.updatedAt).toLocaleString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-      } else {
-        updatedEl.textContent = 'Geen Google Ads-gegevens beschikbaar';
-      }
+      updatedEl.textContent = hasData
+        ? gaRangeLabel(range, customRange) + ' · Laatst bijgewerkt: ' +
+          new Date(data.updatedAt).toLocaleString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+        : 'Geen Google Ads-gegevens beschikbaar';
     } catch (err) {
       console.error('Google Ads load error:', err);
       document.getElementById('ga-clicks').textContent = '—';
       document.getElementById('ga-cost').textContent = '—';
       document.getElementById('ga-cpc').textContent = '—';
+      formatChangeEl(document.getElementById('ga-clicks-change'), null);
+      formatChangeEl(document.getElementById('ga-cost-change'), null);
+      formatChangeEl(document.getElementById('ga-cpc-change'), null);
       renderCampaignTable('gaActiveCampaignTableBody', null, 'Geen lopende campagnes', true);
       renderCampaignTable('gaClosedCampaignTableBody', null, 'Geen afgesloten campagnes', false);
     }
