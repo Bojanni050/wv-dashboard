@@ -586,7 +586,8 @@
     gaClicks: 'Aantal klikken op de Google Ads-campagnes in de afgelopen week (maandag t/m zondag). Deze data komt automatisch via Windsor.ai.',
     gaCostOfClicks: 'Totale advertentiekosten van de Google Ads-klikken in de afgelopen week. Deze data komt automatisch via Windsor.ai.',
     gaCostPerClick: 'Gemiddelde kost per klik (CPC) op de Google Ads-campagnes in de afgelopen week. Deze data komt automatisch via Windsor.ai.',
-    gaCampaigns: 'Google Ads-prestaties per campagne voor de afgelopen week (maandag t/m zondag), opgehaald via Windsor.ai.',
+    gaActiveCampaigns: 'Google Ads-campagnes die nu lopen, met de totalen sinds de start van de campagne. Opgehaald via Windsor.ai.',
+    gaClosedCampaigns: 'Google Ads-campagnes die niet meer lopen (gepauzeerd, verwijderd of afgelopen), met de totalen over hun volledige looptijd. Opgehaald via Windsor.ai.',
   };
 
   var infoSidebar = document.getElementById('infoSidebar');
@@ -924,10 +925,27 @@
     return new Date(dateStr + 'T12:00:00Z').toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', timeZone: 'UTC' });
   }
 
-  function renderGaCampaigns(campaigns) {
-    var body = document.getElementById('gaCampaignTableBody');
+  function formatDateNL(dateStr, withYear) {
+    return new Date(dateStr + 'T12:00:00Z').toLocaleDateString('nl-NL', {
+      day: 'numeric',
+      month: 'short',
+      year: withYear ? 'numeric' : undefined,
+      timeZone: 'UTC',
+    });
+  }
+
+  // "sinds 1 sep 2026" for running campaigns, "15 mei – 31 jul 2026" for closed.
+  function campaignPeriod(c, running) {
+    if (!c.startDate) return '—';
+    if (running || !c.endDate || c.endDate === '2037-12-30') return 'sinds ' + formatDateNL(c.startDate, true);
+    var sameYear = c.startDate.slice(0, 4) === c.endDate.slice(0, 4);
+    return formatDateNL(c.startDate, !sameYear) + ' – ' + formatDateNL(c.endDate, true);
+  }
+
+  function renderCampaignTable(bodyId, campaigns, emptyMessage, running) {
+    var body = document.getElementById(bodyId);
     if (!campaigns || !campaigns.length) {
-      body.innerHTML = '<tr><td colspan="5" class="empty-row">Geen campagnes met gegevens in deze week</td></tr>';
+      body.innerHTML = '<tr><td colspan="6" class="empty-row">' + emptyMessage + '</td></tr>';
       return;
     }
     body.innerHTML = campaigns
@@ -935,6 +953,7 @@
         return (
           '<tr>' +
           '<td>' + escapeHtml(c.campaign) + '</td>' +
+          '<td style="color:#777">' + escapeHtml(campaignPeriod(c, running)) + '</td>' +
           '<td class="th-right">' + formatNumber(c.clicks) + '</td>' +
           '<td class="th-right">' + formatNumber(c.impressions) + '</td>' +
           '<td class="th-right">' + formatCurrency(c.costOfClicks) + '</td>' +
@@ -956,7 +975,8 @@
       document.getElementById('ga-cost').textContent = hasData ? formatCurrency(data.costOfClicks) : '—';
       document.getElementById('ga-cpc').textContent = hasData ? formatCurrency(data.costPerClick) : '—';
 
-      renderGaCampaigns(data.campaigns);
+      renderCampaignTable('gaActiveCampaignTableBody', data.activeCampaigns, 'Geen lopende campagnes', true);
+      renderCampaignTable('gaClosedCampaignTableBody', data.closedCampaigns, 'Geen afgesloten campagnes', false);
 
       var updatedEl = document.getElementById('googleAdsUpdatedAt');
       if (hasData) {
@@ -973,7 +993,8 @@
       document.getElementById('ga-clicks').textContent = '—';
       document.getElementById('ga-cost').textContent = '—';
       document.getElementById('ga-cpc').textContent = '—';
-      renderGaCampaigns(null);
+      renderCampaignTable('gaActiveCampaignTableBody', null, 'Geen lopende campagnes', true);
+      renderCampaignTable('gaClosedCampaignTableBody', null, 'Geen afgesloten campagnes', false);
     }
   }
 

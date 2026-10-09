@@ -319,21 +319,44 @@
       <p class="card-subtitle" id="googleAdsUpdatedAt" style="margin: -20px 0 24px;"></p>
 
       <section class="table-card">
-        <h2 class="card-title widget-title" data-info="gaCampaigns" tabindex="0" role="button">Campagnes</h2>
-        <p class="card-subtitle">Afgelopen week, automatisch via Windsor.ai</p>
+        <h2 class="card-title widget-title" data-info="gaActiveCampaigns" tabindex="0" role="button">Lopende campagnes</h2>
+        <p class="card-subtitle">Totalen sinds de start van de campagne, automatisch via Windsor.ai</p>
         <div class="table-wrap">
-          <table id="gaCampaignTable">
+          <table id="gaActiveCampaignTable">
             <thead>
               <tr>
                 <th>Campagne</th>
+                <th>Looptijd</th>
                 <th class="th-right">Klikken</th>
                 <th class="th-right">Impressies</th>
                 <th class="th-right">Kosten</th>
                 <th class="th-right">Kost per klik</th>
               </tr>
             </thead>
-            <tbody id="gaCampaignTableBody">
-              <tr><td colspan="5" class="loading-row">Laden…</td></tr>
+            <tbody id="gaActiveCampaignTableBody">
+              <tr><td colspan="6" class="loading-row">Laden…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="table-card">
+        <h2 class="card-title widget-title" data-info="gaClosedCampaigns" tabindex="0" role="button">Afgesloten campagnes</h2>
+        <p class="card-subtitle">Totalen over de volledige looptijd</p>
+        <div class="table-wrap">
+          <table id="gaClosedCampaignTable">
+            <thead>
+              <tr>
+                <th>Campagne</th>
+                <th>Periode</th>
+                <th class="th-right">Klikken</th>
+                <th class="th-right">Impressies</th>
+                <th class="th-right">Kosten</th>
+                <th class="th-right">Kost per klik</th>
+              </tr>
+            </thead>
+            <tbody id="gaClosedCampaignTableBody">
+              <tr><td colspan="6" class="loading-row">Laden…</td></tr>
             </tbody>
           </table>
         </div>

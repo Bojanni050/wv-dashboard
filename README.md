@@ -20,8 +20,15 @@ campagne"** onderaan het dashboard:
 
 De cijfers op de tab **Google Ads** (en in de week-/maandrapporten) komen
 automatisch uit Google Ads via [Windsor.ai](https://windsor.ai) — niet meer
-handmatig ingevuld. De tab toont de **afgelopen volledige week (ma–zo)**: KPI's
-klikken / kosten / kost per klik en een tabel per campagne.
+handmatig ingevuld. De tab toont de **afgelopen volledige week (ma–zo)** als
+KPI's (klikken / kosten / kost per klik), plus twee campagne-tabellen:
+
+- **Lopende campagnes** — campagnes die nu lopen, met de totalen sinds hun start.
+- **Afgesloten campagnes** — campagnes die niet meer lopen (gepauzeerd,
+  verwijderd of afgelopen), met de totalen over hun volledige looptijd.
+
+Lopend/afgesloten wordt bepaald uit Google Ads' `campaign_status` in combinatie
+met `start_date`/`end_date`.
 
 Instellen:
 

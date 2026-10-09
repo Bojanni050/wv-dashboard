@@ -771,7 +771,26 @@ app.get('/api/google-ads', basicAuth, async (req, res) => {
   const range =
     /^\d{4}-\d{2}-\d{2}$/.test(from) && /^\d{4}-\d{2}-\d{2}$/.test(to) ? { start: from, end: to } : undefined;
   try {
-    res.json(await readGoogleAds(range));
+    const week = await readGoogleAds(range);
+
+    // Running vs closed campaigns come from the lifetime overview. A failure
+    // here only empties those two tables; the week KPI's still render.
+    let activeCampaigns = [];
+    let closedCampaigns = [];
+    if (googleAds.isConfigured()) {
+      try {
+        const overview = await googleAds.fetchCampaignOverview();
+        if (overview) {
+          const split = googleAds.classifyCampaigns(overview.campaigns, overview.to);
+          activeCampaigns = split.active;
+          closedCampaigns = split.closed;
+        }
+      } catch (err) {
+        console.error('Google Ads campaign overview failed:', err.message);
+      }
+    }
+
+    res.json(Object.assign({}, week, { activeCampaigns, closedCampaigns }));
   } catch (err) {
     console.error('Google Ads endpoint error:', err.message);
     res.status(500).json({ error: 'Google Ads-gegevens ophalen mislukt' });
