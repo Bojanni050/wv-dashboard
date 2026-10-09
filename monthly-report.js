@@ -95,7 +95,7 @@ function createMonthlyReport({ buildAnalytics, readGoogleAds, saveReport }) {
 
   // Returns the buffer as well, so callers can also mail the PDF.
   async function generateSitePdf(data, ranges) {
-    const intro = await writeIntro('month', data, ranges, readGoogleAds());
+    const intro = await writeIntro('month', data, ranges, await readGoogleAds(ranges.current));
     const buffer = await renderReportPdf(data, ranges, intro, PDF_OPTS);
     const filename = 'Maandrapport ' + ranges.current.start + ' t-m ' + ranges.current.end + '.pdf';
     const entry = saveReport(buffer, filename);
@@ -148,7 +148,7 @@ function createMonthlyReport({ buildAnalytics, readGoogleAds, saveReport }) {
   async function sendActions(now) {
     const ranges = lastMonthRanges(now || new Date());
     const data = await fetchData(ranges);
-    return Object.assign({ monthKey: ranges.monthKey }, await sendActionItems({ kind: 'month', data, ranges, googleAds: readGoogleAds() }));
+    return Object.assign({ monthKey: ranges.monthKey }, await sendActionItems({ kind: 'month', data, ranges, googleAds: await readGoogleAds(ranges.current) }));
   }
 
   async function tick() {
@@ -191,7 +191,7 @@ function createMonthlyReport({ buildAnalytics, readGoogleAds, saveReport }) {
 
     if (!actionsDone) {
       try {
-        await sendActionItems({ kind: 'month', data, ranges, googleAds: readGoogleAds() });
+        await sendActionItems({ kind: 'month', data, ranges, googleAds: await readGoogleAds(ranges.current) });
         next.lastMonthActions = monthKey;
         console.log('Monthly action items emailed for month ' + monthKey);
       } catch (err) {

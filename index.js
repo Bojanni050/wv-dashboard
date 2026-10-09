@@ -8,8 +8,9 @@ const multer = require('multer');
 const { BetaAnalyticsDataClient } = require('@google-analytics/data');
 const ai = require('./ai');
 const mailer = require('./mailer');
-const { createWeeklyReport } = require('./weekly-report');
+const { createWeeklyReport, lastWeekRanges } = require('./weekly-report');
 const { createMonthlyReport } = require('./monthly-report');
+const googleAds = require('./lib/google-ads');
 const { createExplainer, isConfigured: isAiConfigured, AUTO_RANGES: AI_AUTO_RANGES } = require('./explain');
 
 const app = express();
@@ -720,7 +721,7 @@ app.delete('/api/reports/:id', basicAuth, requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
-// --- Google Ads (admin fills in manually, data comes from Strato rankingcoach) ---
+// --- Google Ads (figures pulled from Windsor.ai; legacy manual file as fallback) ---
 
 const DATA_DIR = path.join(__dirname, 'data');
 const GOOGLE_ADS_FILE = path.join(DATA_DIR, 'google-ads.json');
@@ -729,45 +730,52 @@ function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-function readGoogleAds() {
-  ensureDataDir();
-  if (!fs.existsSync(GOOGLE_ADS_FILE)) {
-    return { clicks: 0, costOfClicks: 0, costPerClick: 0, updatedAt: null };
-  }
-  try {
-    return JSON.parse(fs.readFileSync(GOOGLE_ADS_FILE, 'utf8'));
-  } catch (err) {
-    console.error('Google Ads data read error:', err.message);
-    return { clicks: 0, costOfClicks: 0, costPerClick: 0, updatedAt: null };
-  }
-}
-
 function isNonNegativeNumber(n) {
   return typeof n === 'number' && isFinite(n) && n >= 0;
 }
 
-app.get('/api/google-ads', basicAuth, (req, res) => {
-  res.json(readGoogleAds());
-});
+function emptyGoogleAds() {
+  return { clicks: 0, impressions: 0, costOfClicks: 0, costPerClick: 0, campaigns: [], updatedAt: null };
+}
 
-app.put('/api/google-ads', basicAuth, requireAdmin, (req, res) => {
-  const { clicks, costOfClicks, costPerClick } = req.body || {};
-
-  if (!isNonNegativeNumber(clicks) || !isNonNegativeNumber(costOfClicks) || !isNonNegativeNumber(costPerClick)) {
-    return res.status(400).json({ error: 'Klikken, kosten en kost per klik moeten geldige getallen zijn (0 of hoger).' });
-  }
-
-  const entry = {
-    clicks,
-    costOfClicks,
-    costPerClick,
-    updatedAt: new Date().toISOString(),
-  };
-
+// The old manually-entered snapshot, kept only so the tab still has something
+// to show when Windsor is not configured. It is no longer editable from the UI.
+function readGoogleAdsFallback() {
   ensureDataDir();
-  fs.writeFileSync(GOOGLE_ADS_FILE, JSON.stringify(entry, null, 2));
+  if (!fs.existsSync(GOOGLE_ADS_FILE)) return emptyGoogleAds();
+  try {
+    return Object.assign(emptyGoogleAds(), JSON.parse(fs.readFileSync(GOOGLE_ADS_FILE, 'utf8')));
+  } catch (err) {
+    console.error('Google Ads data read error:', err.message);
+    return emptyGoogleAds();
+  }
+}
 
-  res.json(entry);
+// range is { start, end } (both 'YYYY-MM-DD', inclusive). When omitted it
+// defaults to the last complete Monday–Sunday week, matching the weekly report.
+async function readGoogleAds(range) {
+  if (!googleAds.isConfigured()) return readGoogleAdsFallback();
+  const effective = range && range.start && range.end ? range : lastWeekRanges(new Date()).current;
+  try {
+    const result = await googleAds.fetchRange(effective);
+    return result || readGoogleAdsFallback();
+  } catch (err) {
+    console.error('Google Ads (Windsor) fetch failed:', err.message);
+    return readGoogleAdsFallback();
+  }
+}
+
+app.get('/api/google-ads', basicAuth, async (req, res) => {
+  const from = String(req.query.from || '').trim();
+  const to = String(req.query.to || '').trim();
+  const range =
+    /^\d{4}-\d{2}-\d{2}$/.test(from) && /^\d{4}-\d{2}-\d{2}$/.test(to) ? { start: from, end: to } : undefined;
+  try {
+    res.json(await readGoogleAds(range));
+  } catch (err) {
+    console.error('Google Ads endpoint error:', err.message);
+    res.status(500).json({ error: 'Google Ads-gegevens ophalen mislukt' });
+  }
 });
 
 // --- AI settings + weekly report (admin only) ---

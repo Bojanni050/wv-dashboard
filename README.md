@@ -16,6 +16,27 @@ campagne"** onderaan het dashboard:
      ontbreekt op de advertentie-URL, of de sessie is nog niet verwerkt door
      GA4 (kan enkele uren duren).
 
+## Google Ads
+
+De cijfers op de tab **Google Ads** (en in de week-/maandrapporten) komen
+automatisch uit Google Ads via [Windsor.ai](https://windsor.ai) — niet meer
+handmatig ingevuld. De tab toont de **afgelopen volledige week (ma–zo)**: KPI's
+klikken / kosten / kost per klik en een tabel per campagne.
+
+Instellen:
+
+1. Maak een Windsor.ai-account en koppel daar één keer het Google Ads-account
+   (OAuth) in hun dashboard.
+2. Kopieer de Windsor API-key naar `WINDSOR_API_KEY` in `.env`.
+3. Zet het Google Ads customer id (met streepjes, bijv. `307-043-6491`) in
+   `WINDSOR_GOOGLE_ADS_ACCOUNT`. Optioneel als het Windsor-account maar één
+   Ads-customer heeft.
+
+Zonder `WINDSOR_API_KEY` valt het dashboard terug op het oude, handmatige
+snapshot in `data/google-ads.json` (dat bestand wordt niet meer door de UI
+bijgewerkt). Resultaten worden één uur gecacht, zodat de tab en de rapporten
+niet bij elke weergave de connector bevragen.
+
 ## Lokaal draaien
 
 ```bash

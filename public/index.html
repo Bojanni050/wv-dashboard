@@ -318,25 +318,25 @@
       </section>
       <p class="card-subtitle" id="googleAdsUpdatedAt" style="margin: -20px 0 24px;"></p>
 
-      <section class="table-card" id="googleAdsEditSection" hidden>
-        <h2 class="card-title">Google Ads bijwerken</h2>
-        <p class="card-subtitle">Alleen zichtbaar voor Admin — data komt via Strato rankingcoach</p>
-        <form class="reports-upload" id="googleAdsForm">
-          <label class="login-field" style="width: 140px;">
-            <span>Klikken</span>
-            <input type="number" id="gaClicksInput" min="0" step="1" required />
-          </label>
-          <label class="login-field" style="width: 160px;">
-            <span>Kosten van Klikken (€)</span>
-            <input type="number" id="gaCostInput" min="0" step="0.01" required />
-          </label>
-          <label class="login-field" style="width: 160px;">
-            <span>Kost per Klik (€)</span>
-            <input type="number" id="gaCpcInput" min="0" step="0.01" required />
-          </label>
-          <button type="submit">Opslaan</button>
-        </form>
-        <p class="reports-upload-status" id="googleAdsStatus" hidden></p>
+      <section class="table-card">
+        <h2 class="card-title widget-title" data-info="gaCampaigns" tabindex="0" role="button">Campagnes</h2>
+        <p class="card-subtitle">Afgelopen week, automatisch via Windsor.ai</p>
+        <div class="table-wrap">
+          <table id="gaCampaignTable">
+            <thead>
+              <tr>
+                <th>Campagne</th>
+                <th class="th-right">Klikken</th>
+                <th class="th-right">Impressies</th>
+                <th class="th-right">Kosten</th>
+                <th class="th-right">Kost per klik</th>
+              </tr>
+            </thead>
+            <tbody id="gaCampaignTableBody">
+              <tr><td colspan="5" class="loading-row">Laden…</td></tr>
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section class="kpi-grid" id="googleAdsAnalyticsKpiGrid" style="margin-top: 32px;">

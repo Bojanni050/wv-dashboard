@@ -60,7 +60,7 @@ function createWeeklyReport({ buildAnalytics, readGoogleAds, saveReport }) {
 
   // Returns the buffer as well, so callers can also mail the PDF.
   async function generateSitePdf(data, ranges) {
-    const intro = await writeIntro('week', data, ranges, readGoogleAds());
+    const intro = await writeIntro('week', data, ranges, await readGoogleAds(ranges.current));
     const buffer = await renderReportPdf(data, ranges, intro, PDF_OPTS);
     const filename = 'Weekrapport ' + ranges.current.start + ' t-m ' + ranges.current.end + '.pdf';
     const entry = saveReport(buffer, filename);
@@ -113,7 +113,7 @@ function createWeeklyReport({ buildAnalytics, readGoogleAds, saveReport }) {
   async function sendActions(now) {
     const ranges = lastWeekRanges(now || new Date());
     const data = await fetchData(ranges);
-    return Object.assign({ weekKey: ranges.weekKey }, await sendActionItems({ kind: 'week', data, ranges, googleAds: readGoogleAds() }));
+    return Object.assign({ weekKey: ranges.weekKey }, await sendActionItems({ kind: 'week', data, ranges, googleAds: await readGoogleAds(ranges.current) }));
   }
 
   async function tick() {
@@ -156,7 +156,7 @@ function createWeeklyReport({ buildAnalytics, readGoogleAds, saveReport }) {
 
     if (!actionsDone) {
       try {
-        await sendActionItems({ kind: 'week', data, ranges, googleAds: readGoogleAds() });
+        await sendActionItems({ kind: 'week', data, ranges, googleAds: await readGoogleAds(ranges.current) });
         next.lastWeekActions = weekKey;
         console.log('Weekly action items emailed for week ' + weekKey);
       } catch (err) {
