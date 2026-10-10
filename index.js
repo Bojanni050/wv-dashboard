@@ -820,8 +820,45 @@ app.get('/api/google-ads', basicAuth, async (req, res) => {
   }
 });
 
+const PLANNING_STATE_FILE = path.join(DATA_DIR, 'planning-state.json');
+
+// Task status changes made in the dashboard: { [taskId]: 'Open' | 'Gedaan' }.
+function readPlanningState() {
+  try {
+    return JSON.parse(fs.readFileSync(PLANNING_STATE_FILE, 'utf8')) || {};
+  } catch (err) {
+    return {};
+  }
+}
+
 app.get('/api/planning', basicAuth, (req, res) => {
-  res.json(planning);
+  const state = readPlanningState();
+  res.json(
+    Object.assign({}, planning, {
+      tasks: planning.tasks.map((t) =>
+        Object.assign({}, t, { status: state[t.id] || t.status })
+      ),
+    })
+  );
+});
+
+app.put('/api/planning/tasks/:id', basicAuth, requireAdmin, (req, res) => {
+  const task = planning.tasks.find((t) => t.id === req.params.id);
+  const status = req.body && req.body.status;
+  if (!task) return res.status(404).json({ error: 'Taak niet gevonden' });
+  if (status !== 'Open' && status !== 'Gedaan') {
+    return res.status(400).json({ error: 'Ongeldige status' });
+  }
+  try {
+    ensureDataDir();
+    const state = readPlanningState();
+    state[task.id] = status;
+    fs.writeFileSync(PLANNING_STATE_FILE, JSON.stringify(state, null, 2));
+    res.json({ id: task.id, status });
+  } catch (err) {
+    console.error('Planning state write error:', err.message);
+    res.status(500).json({ error: 'Opslaan mislukt' });
+  }
 });
 
 // --- AI settings + weekly report (admin only) ---

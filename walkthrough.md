@@ -12,6 +12,10 @@
   bijhouden en deployen), `GET /api/planning` (basic auth), tab + view in
   `public/index.html`, render in `public/app.js`, stijlen `pl-*` in
   `public/styles.css`.
+- Admins kunnen een taak met één klik op de status op Gedaan of terug op Open
+  zetten (`PUT /api/planning/tasks/:id`, alleen admin). De wijziging staat in
+  `data/planning-state.json` (volume `./data`) en wint van de status in
+  `lib/planning.js`. Kijkers zien de status, maar kunnen hem niet wijzigen.
 
 ## 2026-10-09 (Google Ads-koppeling via Windsor.ai)
 

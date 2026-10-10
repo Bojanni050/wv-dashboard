@@ -812,7 +812,9 @@
           '<td>' + escapeHtml(t.title) + '</td>' +
           '<td style="color:#777">' + escapeHtml(t.owner) + '</td>' +
           '<td style="color:#777">' + escapeHtml(plFmt(t.due)) + '</td>' +
-          '<td>' + plPill(t.status) + '</td>' +
+          '<td>' + (isAdmin && (t.status === 'Open' || t.status === 'Gedaan')
+            ? '<button type="button" class="pl-toggle" data-task-id="' + escapeHtml(t.id) + '" data-next="' + (t.status === 'Open' ? 'Gedaan' : 'Open') + '" title="' + (t.status === 'Open' ? 'Zet op gedaan' : 'Zet terug op open') + '">' + plPill(t.status) + '</button>'
+            : plPill(t.status)) + '</td>' +
           '</tr>'
         );
       })
@@ -847,6 +849,24 @@
       : '';
     document.getElementById('plTimeline').innerHTML = '<div class="pl-months">' + months + '</div>' + todayLine + rows;
   }
+
+  document.getElementById('plTasksBody').addEventListener('click', async function (e) {
+    var btn = e.target.closest('.pl-toggle');
+    if (!btn) return;
+    btn.disabled = true;
+    try {
+      var res = await apiFetch('/api/planning/tasks/' + encodeURIComponent(btn.dataset.taskId), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ status: btn.dataset.next }),
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      await loadPlanning();
+    } catch (err) {
+      console.error('Taakstatus opslaan mislukt:', err);
+      btn.disabled = false;
+    }
+  });
 
   async function loadPlanning() {
     try {
