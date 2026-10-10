@@ -1,5 +1,18 @@
 # Walkthrough — White Vision Analytics Dashboard
 
+## 2026-10-10 (tab Planning)
+
+- Findings: de winteractie-campagnes (bruiloft en bedrijfsfeest, 25% korting op
+  feestdata jan t/m mrt 2027) liepen zonder overzicht van planning en taken.
+- Conclusions: een generieke tab **Planning** die uit één databestand rendert,
+  zodat hij ook voor volgende acties bruikbaar is. Live cijfers blijven op de tab
+  Google Ads; deze tab toont campagnestatus en budget (handmatig), een tijdlijn
+  met vandaag-lijn en een takenlijst.
+- Actions: `lib/planning.js` (titel, campagnes, planning, taken; handmatig
+  bijhouden en deployen), `GET /api/planning` (basic auth), tab + view in
+  `public/index.html`, render in `public/app.js`, stijlen `pl-*` in
+  `public/styles.css`.
+
 ## 2026-10-09 (Google Ads-koppeling via Windsor.ai)
 
 - Findings: Google Ads-cijfers werden handmatig door Admin ingevuld op de tab

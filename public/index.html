@@ -70,6 +70,7 @@
     <nav class="tabs">
       <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
       <button class="tab-btn" data-tab="googleads">Google Ads</button>
+      <button class="tab-btn" data-tab="planning">Planning</button>
       <button class="tab-btn" data-tab="reports">Rapporten</button>
       <button class="tab-btn" data-tab="ai" id="aiTabBtn" hidden>AI-instellingen</button>
     </nav>
@@ -397,6 +398,81 @@
       </section>
     </div>
     <!-- /Google Ads tab -->
+
+    <!-- Planning tab -->
+    <div id="planningView" hidden>
+      <h2 class="card-title pl-heading" id="plTitle">Planning</h2>
+      <section class="kpi-grid" id="plKpiGrid">
+        <div class="kpi-tile">
+          <p class="kpi-label">Campagnes actief</p>
+          <p class="kpi-value" id="pl-active">—</p>
+          <p class="kpi-change" id="pl-active-sub"></p>
+        </div>
+        <div class="kpi-tile">
+          <p class="kpi-label">Dagbudget actief</p>
+          <p class="kpi-value" id="pl-budget">—</p>
+          <p class="kpi-change" id="pl-budget-sub"></p>
+        </div>
+        <div class="kpi-tile">
+          <p class="kpi-label">Open taken</p>
+          <p class="kpi-value" id="pl-open">—</p>
+          <p class="kpi-change" id="pl-open-sub"></p>
+        </div>
+        <div class="kpi-tile">
+          <p class="kpi-label">Volgende stap</p>
+          <p class="kpi-value" id="pl-next">—</p>
+          <p class="kpi-change" id="pl-next-sub"></p>
+        </div>
+      </section>
+
+      <section class="table-card">
+        <h2 class="card-title">Planning</h2>
+        <p class="card-subtitle">25% korting geldt voor de datum van het feest (jan t/m mrt 2027). De stippellijn is vandaag.</p>
+        <div class="pl-timeline" id="plTimeline"><p class="loading-row">Laden…</p></div>
+      </section>
+
+      <section class="table-card">
+        <h2 class="card-title">Campagnes</h2>
+        <p class="card-subtitle" id="plCampaignsNote">Handmatig bijgehouden. Live cijfers staan op de tab Google Ads.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Campagne</th>
+                <th>Status</th>
+                <th class="th-right">Per dag</th>
+                <th class="th-right">Max. CPC</th>
+                <th>Opbouw</th>
+              </tr>
+            </thead>
+            <tbody id="plCampaignsBody">
+              <tr><td colspan="5" class="loading-row">Laden…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="table-card">
+        <h2 class="card-title">Taken</h2>
+        <p class="card-subtitle">Wat gedaan is en wat nog openstaat.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Taak</th>
+                <th>Wie</th>
+                <th>Uiterlijk</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="plTasksBody">
+              <tr><td colspan="4" class="loading-row">Laden…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+    <!-- /Planning tab -->
 
     <!-- Reports tab -->
     <div id="reportsView" hidden>

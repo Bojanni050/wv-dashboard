@@ -11,6 +11,7 @@ const mailer = require('./mailer');
 const { createWeeklyReport, lastWeekRanges } = require('./weekly-report');
 const { createMonthlyReport } = require('./monthly-report');
 const googleAds = require('./lib/google-ads');
+const planning = require('./lib/planning');
 const { createExplainer, isConfigured: isAiConfigured, AUTO_RANGES: AI_AUTO_RANGES } = require('./explain');
 
 const app = express();
@@ -817,6 +818,10 @@ app.get('/api/google-ads', basicAuth, async (req, res) => {
     console.error('Google Ads endpoint error:', err.message);
     res.status(500).json({ error: 'Google Ads-gegevens ophalen mislukt' });
   }
+});
+
+app.get('/api/planning', basicAuth, (req, res) => {
+  res.json(planning);
 });
 
 // --- AI settings + weekly report (admin only) ---

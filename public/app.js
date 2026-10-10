@@ -736,6 +736,7 @@
       var tab = btn.dataset.tab;
       document.getElementById('dashboardView').hidden = tab !== 'dashboard';
       document.getElementById('googleadsView').hidden = tab !== 'googleads';
+      document.getElementById('planningView').hidden = tab !== 'planning';
       document.getElementById('reportsView').hidden = tab !== 'reports';
       document.getElementById('aiView').hidden = tab !== 'ai';
       if (tab === 'dashboard') loadExplanation();
@@ -744,12 +745,122 @@
         aiLoaded = true;
         loadAiSettings();
       }
+      if (tab === 'planning') loadPlanning();
       if (tab === 'reports' && !reportsLoaded) {
         reportsLoaded = true;
         loadReports();
       }
     });
   });
+
+  // --- Planning ---
+  var PL_MONTHS = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+  var PL_TYPE_CLASS = { live: 'pl-live', run: 'pl-run', task: 'pl-task', check: 'pl-check', decide: 'pl-decide', party: 'pl-party' };
+  var PL_STATUS_CLASS = { Actief: 'ok', Gedaan: 'ok', Bezig: 'ok', Gepland: 'warn', Open: 'warn', Gepauzeerd: 'muted' };
+
+  function plDay(iso) {
+    var p = iso.split('-');
+    return Date.UTC(+p[0], +p[1] - 1, +p[2]);
+  }
+  function plFmt(iso) {
+    var d = new Date(plDay(iso));
+    return d.getUTCDate() + ' ' + PL_MONTHS[d.getUTCMonth()];
+  }
+  function plPill(status) {
+    return '<span class="pl-pill pl-pill-' + (PL_STATUS_CLASS[status] || 'muted') + '">' + escapeHtml(status) + '</span>';
+  }
+
+  function renderPlanning(data) {
+    if (data.title) document.getElementById('plTitle').textContent = data.title;
+    var campaigns = data.campaigns || [];
+    var tasks = data.tasks || [];
+    var plan = data.plan || [];
+    var active = campaigns.filter(function (c) { return c.status === 'Actief'; });
+    var open = tasks.filter(function (t) { return t.status === 'Open'; });
+    var budget = active.reduce(function (sum, c) { return sum + c.dailyBudget; }, 0);
+    var upcoming = plan
+      .filter(function (p) { return p.status === 'Gepland'; })
+      .sort(function (a, b) { return plDay(a.start) - plDay(b.start); })[0];
+
+    document.getElementById('pl-active').textContent = formatNumber(active.length);
+    document.getElementById('pl-active-sub').textContent = active.map(function (c) { return c.name.replace(/ 2027$/, ''); }).join(', ');
+    document.getElementById('pl-budget').textContent = formatCurrency(budget);
+    document.getElementById('pl-budget-sub').textContent = 'per dag, alleen actieve campagnes';
+    document.getElementById('pl-open').textContent = formatNumber(open.length);
+    document.getElementById('pl-open-sub').textContent = 'van ' + formatNumber(tasks.length) + ' taken';
+    document.getElementById('pl-next').textContent = upcoming ? plFmt(upcoming.start) : '—';
+    document.getElementById('pl-next-sub').textContent = upcoming ? upcoming.title : '';
+
+    document.getElementById('plCampaignsBody').innerHTML = campaigns
+      .map(function (c) {
+        return (
+          '<tr>' +
+          '<td>' + escapeHtml(c.name) + '<div class="pl-sub">' + escapeHtml(c.focus) + '</div></td>' +
+          '<td>' + plPill(c.status) + '</td>' +
+          '<td class="th-right">' + formatCurrency(c.dailyBudget) + '</td>' +
+          '<td class="th-right">' + (c.maxCpc == null ? '—' : formatCurrency(c.maxCpc)) + '</td>' +
+          '<td class="pl-plain">' + escapeHtml(c.structure) + '</td>' +
+          '</tr>'
+        );
+      })
+      .join('');
+
+    document.getElementById('plTasksBody').innerHTML = tasks
+      .map(function (t) {
+        return (
+          '<tr>' +
+          '<td>' + escapeHtml(t.title) + '</td>' +
+          '<td style="color:#777">' + escapeHtml(t.owner) + '</td>' +
+          '<td style="color:#777">' + escapeHtml(plFmt(t.due)) + '</td>' +
+          '<td>' + plPill(t.status) + '</td>' +
+          '</tr>'
+        );
+      })
+      .join('');
+
+    // Timeline: Oct 2026 to early Apr 2027, bars as % of that span.
+    var t0 = plDay('2026-10-01');
+    var t1 = plDay('2027-04-05');
+    var span = t1 - t0;
+    var pct = function (ms) { return Math.max(0, Math.min(100, ((ms - t0) / span) * 100)); };
+    var months = '';
+    ['2026-10-01', '2026-11-01', '2026-12-01', '2027-01-01', '2027-02-01', '2027-03-01', '2027-04-01'].forEach(function (m) {
+      months += '<span style="left:' + pct(plDay(m)).toFixed(2) + '%">' + PL_MONTHS[+m.split('-')[1] - 1] + '</span>';
+    });
+    var rows = plan
+      .map(function (p) {
+        var left = pct(plDay(p.start));
+        var width = Math.max(pct(plDay(p.end) + 86400000) - left, 1.4);
+        var range = p.start === p.end ? plFmt(p.start) : plFmt(p.start) + ' – ' + plFmt(p.end);
+        return (
+          '<div class="pl-row">' +
+          '<div class="pl-label"><span>' + escapeHtml(p.title) + '</span><em>' + escapeHtml(range) + '</em></div>' +
+          '<div class="pl-track"><div class="pl-bar ' + (PL_TYPE_CLASS[p.type] || 'pl-run') + '" style="left:' + left.toFixed(2) + '%;width:' + width.toFixed(2) + '%"></div></div>' +
+          '</div>'
+        );
+      })
+      .join('');
+    var now = new Date();
+    var today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+    var todayLine = today >= t0 && today <= t1
+      ? '<div class="pl-today"><div style="left:' + pct(today).toFixed(2) + '%" title="Vandaag"></div></div>'
+      : '';
+    document.getElementById('plTimeline').innerHTML = '<div class="pl-months">' + months + '</div>' + todayLine + rows;
+  }
+
+  async function loadPlanning() {
+    try {
+      var res = await apiFetch('/api/planning', { headers: { Accept: 'application/json' } });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      renderPlanning(await res.json());
+    } catch (err) {
+      console.error('Planning laden mislukt:', err);
+      var msg = '<tr><td colspan="5" class="empty-row">Laden mislukt</td></tr>';
+      document.getElementById('plCampaignsBody').innerHTML = msg;
+      document.getElementById('plTasksBody').innerHTML = msg;
+      document.getElementById('plTimeline').innerHTML = '<p class="empty-row">Laden mislukt</p>';
+    }
+  }
 
   // --- Reports ---
   var isAdmin = false;
