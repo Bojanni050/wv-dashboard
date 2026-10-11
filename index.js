@@ -75,6 +75,18 @@ function requireAdmin(req, res, next) {
 
 // --- Helpers ---
 
+// "Now" as seen in the reporting timezone, so ranges like 'yesterday' don't
+// shift when the server runs in UTC. Returns a Date whose local fields hold
+// the Amsterdam calendar date.
+const REPORT_TIMEZONE = process.env.REPORT_TIMEZONE || 'Europe/Amsterdam';
+function todayInReportTz() {
+  const [y, m, d] = new Intl.DateTimeFormat('en-CA', { timeZone: REPORT_TIMEZONE })
+    .format(new Date())
+    .split('-')
+    .map(Number);
+  return new Date(y, m - 1, d);
+}
+
 function formatDate(date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -96,7 +108,7 @@ function resolveRangeParam(query) {
       isValidDateStr(start) &&
       isValidDateStr(end) &&
       start <= end &&
-      end <= formatDate(new Date()) &&
+      end <= formatDate(todayInReportTz()) &&
       daysInRange({ start, end }) <= MAX_CUSTOM_RANGE_DAYS
     ) {
       return { rangeParam: 'custom', customStart: start, customEnd: end };
@@ -110,7 +122,7 @@ function resolveRangeParam(query) {
 
 // rangeParam is 'today' | 'yesterday' | '7' | '90' | 'month' | 'custom'
 function resolveCurrentRange(rangeParam, customStart, customEnd) {
-  const end = new Date();
+  const end = todayInReportTz();
 
   if (rangeParam === 'custom') {
     return { start: customStart, end: customEnd };
@@ -131,7 +143,7 @@ function resolveCurrentRange(rangeParam, customStart, customEnd) {
     return { start: formatDate(start), end: formatDate(end) };
   }
 
-  const start = new Date();
+  const start = new Date(end);
   start.setDate(end.getDate() - parseInt(rangeParam, 10));
   return { start: formatDate(start), end: formatDate(end) };
 }
