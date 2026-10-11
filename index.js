@@ -257,11 +257,11 @@ async function fetchChannels(dateRange) {
 // conversions.
 //
 // The event that marks a submission also changed over time. The dedicated
-// gforms_submission event only exists from OFFERTE_EVENT_SWITCH_DATE; before
+// gform_submission event only exists from OFFERTE_EVENT_SWITCH_DATE; before
 // that, form_submit is the only event that was measured the whole year. Ranges
 // that span the switch are queried in two parts and added together, so periods
 // before mid-September no longer show 0 offertes.
-const OFFERTE_EVENT = 'gforms_submission';
+const OFFERTE_EVENT = 'gform_submission';
 const LEGACY_OFFERTE_EVENT = 'form_submit';
 const OFFERTE_EVENT_SWITCH_DATE = '2026-09-15';
 const LEGACY_LAST_DATE = '2026-09-14';
