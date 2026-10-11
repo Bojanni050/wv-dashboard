@@ -1010,3 +1010,74 @@ tbody td.pl-plain { font-family: var(--font-body); font-size: 14px; font-weight:
 .pl-toggle:hover .pl-pill, .pl-toggle:focus-visible .pl-pill { border-color: var(--gold); }
 .pl-toggle:focus-visible { outline: 1px solid var(--gold); outline-offset: 3px; border-radius: 999px; }
 .pl-toggle:disabled { opacity: 0.5; cursor: wait; }
+
+/* --- Loading indicator (period / compare change) --- */
+.load-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 1000;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.load-bar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  animation: load-bar-slide 1.1s ease-in-out infinite;
+}
+
+body.is-loading .load-bar {
+  opacity: 1;
+}
+
+@keyframes load-bar-slide {
+  from { left: -40%; }
+  to { left: 100%; }
+}
+
+.kpi-tile,
+.chart-card {
+  transition: opacity 0.2s;
+}
+
+body.is-loading .kpi-tile,
+body.is-loading .chart-card {
+  opacity: 0.45;
+}
+
+.period-btn.is-busy {
+  position: relative;
+  color: transparent;
+}
+
+.period-btn.is-busy::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border: 2px solid currentColor;
+  border-color: var(--bg) transparent var(--bg) transparent;
+  border-radius: 50%;
+  animation: load-spin 0.7s linear infinite;
+}
+
+@keyframes load-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .load-bar::before { animation: none; width: 100%; left: 0; }
+  .period-btn.is-busy::after { animation: none; }
+}

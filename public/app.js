@@ -535,6 +535,8 @@
   });
 
   // --- Main load ---
+  var loadCounter = 0;
+
   async function load(range, compare, customRange) {
     currentRange = range;
     currentCompare = compare;
@@ -546,6 +548,9 @@
         : RANGE_LABELS[range];
     document.getElementById('lineChartSubtitle').textContent = 'Deze periode vs. ' + COMPARE_LABELS[compare];
 
+    var loadId = ++loadCounter;
+    setLoading(true);
+
     try {
       var data = await fetchAnalytics(range, compare, customRange);
       updateKPIs(data);
@@ -554,7 +559,9 @@
       renderTable(data);
       updateLastRefreshed();
       loadExplanation();
-      loadGoogleAds(range, compare, customRange);
+      // Keep the indicator up until the Google Ads figures are in too, but
+      // only the newest load may switch it off.
+      await loadGoogleAds(range, compare, customRange);
     } catch (err) {
       console.error('Load error:', err);
       var errorRow = '<tr><td colspan="2" class="empty-row">Fout bij laden van gegevens</td></tr>';
@@ -562,7 +569,20 @@
       document.getElementById('offerteChannelTableBody').innerHTML = errorRow;
       document.getElementById('offerteCampaignTableBody').innerHTML = errorRow;
       document.getElementById('offerteCampaignTableBody-ads').innerHTML = errorRow;
+    } finally {
+      if (loadId === loadCounter) setLoading(false);
     }
+  }
+
+  // Loading indicator: top bar + dimmed tiles, and a spinner on the active
+  // period button, so a period/compare change visibly does something.
+  function setLoading(on) {
+    document.body.classList.toggle('is-loading', on);
+    var root = document.getElementById('dashboardRoot');
+    if (root) root.setAttribute('aria-busy', on ? 'true' : 'false');
+    document.querySelectorAll('.period-btn[data-range]').forEach(function (b) {
+      b.classList.toggle('is-busy', on && b.classList.contains('active'));
+    });
   }
 
   // --- Widget info sidebar ---
