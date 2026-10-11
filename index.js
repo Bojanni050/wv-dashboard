@@ -515,6 +515,9 @@ async function buildAnalytics(ranges, rangeParam, compareParam) {
   const conversionSocial = conversionRate(offerteChannelGroups.social, channelGroups.social);
   const prevConversionSocial = conversionRate(prevOfferteChannelGroups.social, prevChannelGroups.social);
 
+  const conversionOverig = conversionRate(offerteChannelGroups.overig, channelGroups.overig);
+  const prevConversionOverig = conversionRate(prevOfferteChannelGroups.overig, prevChannelGroups.overig);
+
   const socialPlatforms = {};
   SOCIAL_PLATFORMS.forEach((p) => {
     const cur = socialByPlatform[p];
@@ -588,6 +591,11 @@ async function buildAnalytics(ranges, rangeParam, compareParam) {
         current: conversionSocial,
         previous: prevConversionSocial,
         change: pctChange(conversionSocial, prevConversionSocial),
+      },
+      conversionOverig: {
+        current: conversionOverig,
+        previous: prevConversionOverig,
+        change: pctChange(conversionOverig, prevConversionOverig),
       },
       avgSessionDuration: {
         current: currentMetrics.avgSessionDuration,

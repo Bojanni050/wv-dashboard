@@ -161,6 +161,12 @@
     setKpiValue('kpi-overig', k.overig.current, k.overig.previous, k.overig.change, formatNumber);
     formatChangeEl(document.getElementById('kpi-overig-change'), k.overig.change);
 
+    setKpiValue('kpi-forms-total', k.offertes.current, k.offertes.previous, k.offertes.change, formatNumber);
+    formatChangeEl(document.getElementById('kpi-forms-total-change'), k.offertes.change);
+
+    setKpiValue('kpi-conv-overig', k.conversionOverig.current, k.conversionOverig.previous, k.conversionOverig.change, formatConversion);
+    formatChangeEl(document.getElementById('kpi-conv-overig-change'), k.conversionOverig.change);
+
     setKpiValue('kpi-conv-total', k.conversionTotal.current, k.conversionTotal.previous, k.conversionTotal.change, formatConversion);
     formatChangeEl(document.getElementById('kpi-conv-total-change'), k.conversionTotal.change);
 
@@ -571,6 +577,8 @@
     overig: 'Aantal sessies via overige kanalen: Direct, Referral, Organic Video en niet-geclassificeerd verkeer.',
     conversionTotal: 'Percentage van alle gebruikers dat een offerteaanvraag heeft ingediend: offertes gedeeld door totaal aantal gebruikers.',
     conversionPaid: 'Conversieratio van bezoekers via betaalde ads: sessies met een offerteaanvraag via betaalde kanalen gedeeld door sessies via betaalde kanalen. Vóór 15 september 2026 wordt hiervoor "form_submit" gebruikt (per sessie ontdubbeld), daarna "gforms_submission".',
+    formsTotal: 'Totaal aantal ingediende formulieren (offerteaanvragen) in de gekozen periode, ontdubbeld per sessie.',
+    conversionOverig: 'Conversieratio van bezoekers via overige kanalen (Direct, Referral, Organic Video en niet-geclassificeerd): sessies met een ingediend formulier gedeeld door sessies via overige kanalen.',
     conversionSocial: 'Conversieratio van bezoekers via organic social: offerteaanvragen via Organic Social gedeeld door sessies via Organic Social.',
     conversionFacebook: 'Conversieratio van bezoekers via Facebook (organic): offerteaanvragen gedeeld door sessies vanuit Facebook.',
     conversionInstagram: 'Conversieratio van bezoekers via Instagram (organic): offerteaanvragen gedeeld door sessies vanuit Instagram.',
