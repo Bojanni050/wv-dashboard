@@ -170,10 +170,42 @@ function resolveComparisonRange(current, compareParam) {
   return { start: formatDate(prevStart), end: formatDate(prevEnd) };
 }
 
+// Current hour (0-23) in the reporting timezone.
+function currentHourInReportTz() {
+  const h = new Intl.DateTimeFormat('en-GB', {
+    timeZone: REPORT_TIMEZONE,
+    hour: '2-digit',
+    hourCycle: 'h23',
+  }).format(new Date());
+  return parseInt(h, 10);
+}
+
 function getRanges(rangeParam, compareParam, customStart, customEnd) {
   const current = resolveCurrentRange(rangeParam, customStart, customEnd);
   const previous = resolveComparisonRange(current, compareParam);
+  // 'Vandaag' is only partly over, so compare against the same hours of the
+  // comparison day instead of its full 24 hours.
+  if (rangeParam === 'today') previous.hourCap = currentHourInReportTz();
   return { current, previous };
+}
+
+// GA4 dimension filter limiting a range to hours 00..hourCap (only set for
+// the comparison range of 'Vandaag'). Returns null when no cap applies.
+function hourCapFilter(range) {
+  if (range.hourCap === undefined) return null;
+  const values = [];
+  for (let h = 0; h <= range.hourCap; h++) values.push(String(h).padStart(2, '0'));
+  return { filter: { fieldName: 'hour', inListFilter: { values } } };
+}
+
+// Combines the hour cap (if any) with other dimension filter expressions.
+function withHourCap(range, expressions = []) {
+  const all = [...expressions];
+  const cap = hourCapFilter(range);
+  if (cap) all.push(cap);
+  if (all.length === 0) return undefined;
+  if (all.length === 1) return all[0];
+  return { andGroup: { expressions: all } };
 }
 
 function daysInRange(range) {
@@ -228,6 +260,7 @@ async function fetchMetricsForRange(dateRange) {
       { name: 'engagementRate' },
       { name: 'bounceRate' },
     ],
+    dimensionFilter: withHourCap(dateRange),
   });
 
   const row = response.rows?.[0]?.metricValues || [];
@@ -251,6 +284,7 @@ async function fetchChannels(dateRange) {
     dateRanges: [{ startDate: dateRange.start, endDate: dateRange.end }],
     dimensions: [{ name: 'sessionDefaultChannelGroup' }],
     metrics: [{ name: 'sessions' }],
+    dimensionFilter: withHourCap(dateRange),
     orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
   });
 
@@ -308,19 +342,15 @@ async function fetchOfferteSessions(dateRange, dimension, extraFilters = []) {
         dateRanges: [{ startDate: part.start, endDate: part.end }],
         dimensions: [{ name: dimension }],
         metrics: [{ name: 'sessions' }],
-        dimensionFilter: {
-          andGroup: {
-            expressions: [
-              {
-                filter: {
-                  fieldName: 'eventName',
-                  stringFilter: { matchType: 'EXACT', value: part.event },
-                },
-              },
-              ...extraFilters,
-            ],
+        dimensionFilter: withHourCap(dateRange, [
+          {
+            filter: {
+              fieldName: 'eventName',
+              stringFilter: { matchType: 'EXACT', value: part.event },
+            },
           },
-        },
+          ...extraFilters,
+        ]),
       });
       return response.rows || [];
     })
@@ -388,7 +418,7 @@ async function fetchSocialByPlatform(dateRange) {
       dateRanges: [{ startDate: dateRange.start, endDate: dateRange.end }],
       dimensions: [{ name: 'sessionSource' }],
       metrics: [{ name: 'sessions' }],
-      dimensionFilter: ORGANIC_SOCIAL_FILTER,
+      dimensionFilter: withHourCap(dateRange, [ORGANIC_SOCIAL_FILTER]),
     }),
     fetchOfferteSessions(dateRange, 'sessionSource', [ORGANIC_SOCIAL_FILTER]),
   ]);
@@ -437,6 +467,7 @@ async function fetchDailySessions(dateRange, days) {
     dateRanges: [{ startDate: dateRange.start, endDate: dateRange.end }],
     dimensions: [{ name: 'date' }],
     metrics: [{ name: 'sessions' }],
+    dimensionFilter: withHourCap(dateRange),
     orderBys: [{ dimension: { dimensionName: 'date' }, orderType: 'NUMERIC' }],
   });
 
@@ -536,6 +567,8 @@ async function buildAnalytics(ranges, rangeParam, compareParam) {
     compare: compareParam,
     periodStart: ranges.current.start,
     periodEnd: ranges.current.end,
+    partialDay: rangeParam === 'today',
+    compareUntilHour: ranges.previous.hourCap ?? null,
     kpis: {
       sessions: {
         current: currentMetrics.sessions,

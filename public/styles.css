@@ -1081,3 +1081,12 @@ body.is-loading .chart-card {
   .load-bar::before { animation: none; width: 100%; left: 0; }
   .period-btn.is-busy::after { animation: none; }
 }
+
+.partial-day-note {
+  margin: -4px 0 12px;
+  font-size: 12px;
+  color: var(--gold, #c9a85c);
+}
+.kpi-grid.is-provisional .kpi-tile {
+  opacity: 0.6;
+}

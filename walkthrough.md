@@ -95,3 +95,9 @@
   de lazy `googleAdsLoaded`-guard verwijderd; README bijgewerkt. `node --check`
   op alle gewijzigde JS geslaagd. Nog te valideren op de VPS: dat de Windsor-
   cijfers per periode kloppen t.o.v. Google Ads.
+
+## 2026-10-13 (Vandaag vergelijken op hetzelfde tijdstip)
+
+- Findings: Bij "Vandaag" werd de lopende dag (tot nu) vergeleken met de volledige vorige dag, waardoor alle deltas sterk negatief waren. Daarnaast levert GA4 voor de lopende dag engagement-cijfers (tijd, engagement, bounce) met vertraging, waardoor 0:00 / 0% / 100% getoond werd.
+- Conclusions: Vergelijk de comparison-periode alleen tot hetzelfde uur (GA4-dimensie `hour`, Europe/Amsterdam) en toon een melding dat de engagement-cijfers voorlopig zijn. Geen wijziging voor andere periodes.
+- Actions: index.js: `currentHourInReportTz`, `hourCapFilter`, `withHourCap`; `getRanges` zet `previous.hourCap` bij range 'today'; filter toegepast in fetchMetricsForRange, fetchChannels, fetchOfferteSessions, fetchSocialByPlatform, fetchDailySessions; response bevat `partialDay` en `compareUntilHour`. public/app.js + index.html + styles.css: melding onder kop Engagement en gedimde tegels bij partialDay. `node --check` geslaagd; nog te valideren tegen live GA4-data.

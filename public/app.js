@@ -200,6 +200,21 @@
 
     setKpiValue('kpi-engagement-bounce', k.bounceRate.current, k.bounceRate.previous, k.bounceRate.change, formatConversion, true);
     formatChangeEl(document.getElementById('kpi-engagement-bounce-change'), k.bounceRate.change, true);
+
+    // 'Vandaag' is nog niet compleet: GA4 verwerkt engagement-cijfers met vertraging
+    var note = document.getElementById('partialDayNote');
+    var grid = document.getElementById('engagementKpiGrid');
+    if (note && grid) {
+      note.hidden = !data.partialDay;
+      grid.classList.toggle('is-provisional', !!data.partialDay);
+      if (data.partialDay) {
+        note.textContent =
+          'Vandaag is nog niet compleet: GA4 verwerkt engagement-cijfers met vertraging, dus deze waarden zijn voorlopig.' +
+          (data.compareUntilHour !== null && data.compareUntilHour !== undefined
+            ? ' De vergelijking loopt tot ' + String(data.compareUntilHour + 1).padStart(2, '0') + ':00 van de vergelijkingsdag.'
+            : '');
+      }
+    }
   }
 
   // --- Line chart ---
