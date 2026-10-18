@@ -237,6 +237,11 @@ function groupByChannel(rows, valueKey) {
   return totals;
 }
 
+// One dashboard KPI: current value, comparison value and percentage change.
+function kpi(current, previous) {
+  return { current, previous, change: pctChange(current, previous) };
+}
+
 function conversionRate(conversions, base) {
   if (base === 0) return 0;
   return Math.round((conversions / base) * 1000) / 10;
@@ -477,17 +482,14 @@ async function fetchDailySessions(dateRange, days) {
   }));
 
   // Fill in any missing days with zero
+  const sessionsByDate = new Map(rows.map((r) => [r.date, r.sessions]));
   const filled = [];
   const startDate = new Date(dateRange.start);
   for (let i = 0; i < days; i++) {
     const d = new Date(startDate);
     d.setDate(startDate.getDate() + i);
     const dateStr = formatDate(d);
-    const found = rows.find((r) => r.date === dateStr);
-    filled.push({
-      date: dateStr,
-      sessions: found ? found.sessions : 0,
-    });
+    filled.push({ date: dateStr, sessions: sessionsByDate.get(dateStr) || 0 });
   }
 
   return filled;
@@ -495,7 +497,7 @@ async function fetchDailySessions(dateRange, days) {
 
 // --- Main endpoint ---
 
-async function buildAnalytics(ranges, rangeParam, compareParam) {
+async function fetchAnalytics(ranges, rangeParam, compareParam) {
   const [
     currentMetrics,
     previousMetrics,
@@ -558,7 +560,7 @@ async function buildAnalytics(ranges, rangeParam, compareParam) {
     socialPlatforms[p] = {
       sessions: cur.sessions,
       offertes: cur.offertes,
-      conversion: { current: rate, previous: prevRate, change: pctChange(rate, prevRate) },
+      conversion: kpi(rate, prevRate),
     };
   });
 
@@ -570,86 +572,22 @@ async function buildAnalytics(ranges, rangeParam, compareParam) {
     partialDay: rangeParam === 'today',
     compareUntilHour: ranges.previous.hourCap ?? null,
     kpis: {
-      sessions: {
-        current: currentMetrics.sessions,
-        previous: previousMetrics.sessions,
-        change: pctChange(currentMetrics.sessions, previousMetrics.sessions),
-      },
-      users: {
-        current: currentMetrics.users,
-        previous: previousMetrics.users,
-        change: pctChange(currentMetrics.users, previousMetrics.users),
-      },
-      pageviews: {
-        current: currentMetrics.pageviews,
-        previous: previousMetrics.pageviews,
-        change: pctChange(currentMetrics.pageviews, previousMetrics.pageviews),
-      },
-      offertes: {
-        current: offerteCount,
-        previous: prevOfferteCount,
-        change: pctChange(offerteCount, prevOfferteCount),
-      },
-      paidAds: {
-        current: channelGroups.paidAds,
-        previous: prevChannelGroups.paidAds,
-        change: pctChange(channelGroups.paidAds, prevChannelGroups.paidAds),
-      },
-      social: {
-        current: channelGroups.social,
-        previous: prevChannelGroups.social,
-        change: pctChange(channelGroups.social, prevChannelGroups.social),
-      },
-      search: {
-        current: channelGroups.search,
-        previous: prevChannelGroups.search,
-        change: pctChange(channelGroups.search, prevChannelGroups.search),
-      },
-      overig: {
-        current: channelGroups.overig,
-        previous: prevChannelGroups.overig,
-        change: pctChange(channelGroups.overig, prevChannelGroups.overig),
-      },
-      conversionTotal: {
-        current: conversionTotal,
-        previous: prevConversionTotal,
-        change: pctChange(conversionTotal, prevConversionTotal),
-      },
-      conversionPaid: {
-        current: conversionPaid,
-        previous: prevConversionPaid,
-        change: pctChange(conversionPaid, prevConversionPaid),
-      },
-      conversionSocial: {
-        current: conversionSocial,
-        previous: prevConversionSocial,
-        change: pctChange(conversionSocial, prevConversionSocial),
-      },
-      conversionOverig: {
-        current: conversionOverig,
-        previous: prevConversionOverig,
-        change: pctChange(conversionOverig, prevConversionOverig),
-      },
-      avgSessionDuration: {
-        current: currentMetrics.avgSessionDuration,
-        previous: previousMetrics.avgSessionDuration,
-        change: pctChange(currentMetrics.avgSessionDuration, previousMetrics.avgSessionDuration),
-      },
-      pagesPerSession: {
-        current: currentMetrics.pagesPerSession,
-        previous: previousMetrics.pagesPerSession,
-        change: pctChange(currentMetrics.pagesPerSession, previousMetrics.pagesPerSession),
-      },
-      engagementRate: {
-        current: currentMetrics.engagementRate,
-        previous: previousMetrics.engagementRate,
-        change: pctChange(currentMetrics.engagementRate, previousMetrics.engagementRate),
-      },
-      bounceRate: {
-        current: currentMetrics.bounceRate,
-        previous: previousMetrics.bounceRate,
-        change: pctChange(currentMetrics.bounceRate, previousMetrics.bounceRate),
-      },
+      sessions: kpi(currentMetrics.sessions, previousMetrics.sessions),
+      users: kpi(currentMetrics.users, previousMetrics.users),
+      pageviews: kpi(currentMetrics.pageviews, previousMetrics.pageviews),
+      offertes: kpi(offerteCount, prevOfferteCount),
+      paidAds: kpi(channelGroups.paidAds, prevChannelGroups.paidAds),
+      social: kpi(channelGroups.social, prevChannelGroups.social),
+      search: kpi(channelGroups.search, prevChannelGroups.search),
+      overig: kpi(channelGroups.overig, prevChannelGroups.overig),
+      conversionTotal: kpi(conversionTotal, prevConversionTotal),
+      conversionPaid: kpi(conversionPaid, prevConversionPaid),
+      conversionSocial: kpi(conversionSocial, prevConversionSocial),
+      conversionOverig: kpi(conversionOverig, prevConversionOverig),
+      avgSessionDuration: kpi(currentMetrics.avgSessionDuration, previousMetrics.avgSessionDuration),
+      pagesPerSession: kpi(currentMetrics.pagesPerSession, previousMetrics.pagesPerSession),
+      engagementRate: kpi(currentMetrics.engagementRate, previousMetrics.engagementRate),
+      bounceRate: kpi(currentMetrics.bounceRate, previousMetrics.bounceRate),
     },
     socialPlatforms,
     channels,
@@ -660,6 +598,26 @@ async function buildAnalytics(ranges, rangeParam, compareParam) {
     dailySessionsPrev,
     topPages,
   };
+}
+
+// Identical views (several viewers, the AI explanation, the reports) share
+// one set of GA4 calls for a short while instead of each firing their own 13.
+const ANALYTICS_CACHE_TTL_MS = 2 * 60 * 1000;
+const analyticsCache = new Map(); // key -> { at, promise }
+
+function buildAnalytics(ranges, rangeParam, compareParam) {
+  const key = JSON.stringify([ranges, rangeParam, compareParam]);
+  const hit = analyticsCache.get(key);
+  if (hit && Date.now() - hit.at < ANALYTICS_CACHE_TTL_MS) return hit.promise;
+
+  const promise = fetchAnalytics(ranges, rangeParam, compareParam);
+  analyticsCache.set(key, { at: Date.now(), promise });
+  // Never cache a failure; drop expired entries so the map stays small.
+  promise.catch(() => analyticsCache.delete(key));
+  for (const [k, v] of analyticsCache) {
+    if (Date.now() - v.at >= ANALYTICS_CACHE_TTL_MS) analyticsCache.delete(k);
+  }
+  return promise;
 }
 
 app.get('/api/analytics', basicAuth, async (req, res) => {
@@ -688,12 +646,10 @@ function ensureReportsDir() {
 }
 
 function readReportsIndex() {
-  ensureReportsDir();
-  if (!fs.existsSync(REPORTS_INDEX_FILE)) return [];
   try {
     return JSON.parse(fs.readFileSync(REPORTS_INDEX_FILE, 'utf8'));
   } catch (err) {
-    console.error('Reports index read error:', err.message);
+    if (err.code !== 'ENOENT') console.error('Reports index read error:', err.message);
     return [];
   }
 }
@@ -825,9 +781,20 @@ app.get('/api/google-ads', basicAuth, async (req, res) => {
 
   try {
     const ranges = getRanges(rangeParam, compareParam, customStart, customEnd);
-    const [current, previous] = await Promise.all([
+    // The campaign overview is independent of the two ranges, so fetch it in
+    // parallel. A failure there only empties the running/closed tables; the
+    // KPI's still render.
+    const overviewPromise = googleAds.isConfigured()
+      ? googleAds.fetchCampaignOverview().catch((err) => {
+          console.error('Google Ads campaign overview failed:', err.message);
+          return null;
+        })
+      : Promise.resolve(null);
+
+    const [current, previous, overview] = await Promise.all([
       readGoogleAds(ranges.current),
       readGoogleAds(ranges.previous),
+      overviewPromise,
     ]);
 
     const changes = {
@@ -837,22 +804,9 @@ app.get('/api/google-ads', basicAuth, async (req, res) => {
       costPerClick: pctChange(current.costPerClick, previous.costPerClick),
     };
 
-    // Running vs closed campaigns come from the lifetime overview. A failure
-    // here only empties those two tables; the KPI's still render.
-    let activeCampaigns = [];
-    let closedCampaigns = [];
-    if (googleAds.isConfigured()) {
-      try {
-        const overview = await googleAds.fetchCampaignOverview();
-        if (overview) {
-          const split = googleAds.classifyCampaigns(overview.campaigns, overview.to);
-          activeCampaigns = split.active;
-          closedCampaigns = split.closed;
-        }
-      } catch (err) {
-        console.error('Google Ads campaign overview failed:', err.message);
-      }
-    }
+    const { active: activeCampaigns, closed: closedCampaigns } = overview
+      ? googleAds.classifyCampaigns(overview.campaigns, overview.to)
+      : { active: [], closed: [] };
 
     res.json(
       Object.assign({}, current, {
