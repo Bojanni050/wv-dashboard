@@ -317,10 +317,8 @@ const LEGACY_OFFERTE_EVENT = 'form_submit';
 const OFFERTE_EVENT_SWITCH_DATE = '2026-09-15';
 const LEGACY_LAST_DATE = '2026-09-14';
 
-// Both events are counted after the switch date: gforms_submission does not
-// fire on every submission (27 and 28 Oct only produced form_submit), so
-// filtering on a single event misses real offertes. One query with both event
-// names counts each session once, even when both events fired in it.
+// After the switch date only gforms_submission counts. form_submit still
+// fires on test submissions, so it must not be counted anymore.
 function offerteEventParts(dateRange) {
   const parts = [];
   if (dateRange.start <= LEGACY_LAST_DATE) {
@@ -332,7 +330,7 @@ function offerteEventParts(dateRange) {
   }
   if (dateRange.end >= OFFERTE_EVENT_SWITCH_DATE) {
     parts.push({
-      events: [OFFERTE_EVENT, LEGACY_OFFERTE_EVENT],
+      events: [OFFERTE_EVENT],
       start: dateRange.start > OFFERTE_EVENT_SWITCH_DATE ? dateRange.start : OFFERTE_EVENT_SWITCH_DATE,
       end: dateRange.end,
     });
