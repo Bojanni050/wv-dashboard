@@ -106,7 +106,7 @@
 
 - Findings: GA4 had op 26 okt één `gforms_submission`, maar met kanaal "Unassigned" en 0 sessies; het dashboard telt de metric `sessions`, dus die inzending telde als 0. Op 27 en 28 okt vuurde alleen `form_submit` (geen `gforms_submission`), en dat event werd sinds 15 sept genegeerd.
 - Conclusions: Na 15 sept beide events tellen in één query (inListFilter, dus één keer per sessie), en elke rij met minstens één event telt minimaal 1, ook als GA4 er geen sessie aan koppelt.
-- Actions: index.js: `offerteEventParts` geeft nu `events`-lijsten; `fetchOfferteSessions` gebruikt `inListFilter`, vraagt ook `eventCount` op en telt `max(sessions, events>0 ? 1 : 0)`; `node --check` geslaagd. Gevalideerd tegen GA4-data via rapport (26/27/28 okt), nog niet tegen de live dashboard-output. Let op: gforms_submission vuurt niet bij elke inzending, de GTM/WPCode-trigger verdient een check.
+- Actions: index.js: `offerteEventParts` geeft nu `events`-lijsten; `fetchOfferteSessions` gebruikt `inListFilter`, vraagt ook `eventCount` op en telt `max(sessions, events>0 ? 1 : 0)`; `node --check` geslaagd. Gevalideerd tegen GA4-data via rapport (26/27/28 okt), nog niet tegen de live dashboard-output. Let op: of gforms_submission bij elke echte inzending vuurt is niet vastgesteld (27 en 28 okt waren testinzendingen); alleen vaststaand is dat de inzending van 26 okt zonder sessie binnenkwam.
 
 ## 2026-10-29 (Alleen gforms_submission tellen na 15 sept)
 
