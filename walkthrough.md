@@ -101,3 +101,9 @@
 - Findings: Bij "Vandaag" werd de lopende dag (tot nu) vergeleken met de volledige vorige dag, waardoor alle deltas sterk negatief waren. Daarnaast levert GA4 voor de lopende dag engagement-cijfers (tijd, engagement, bounce) met vertraging, waardoor 0:00 / 0% / 100% getoond werd.
 - Conclusions: Vergelijk de comparison-periode alleen tot hetzelfde uur (GA4-dimensie `hour`, Europe/Amsterdam) en toon een melding dat de engagement-cijfers voorlopig zijn. Geen wijziging voor andere periodes.
 - Actions: index.js: `currentHourInReportTz`, `hourCapFilter`, `withHourCap`; `getRanges` zet `previous.hourCap` bij range 'today'; filter toegepast in fetchMetricsForRange, fetchChannels, fetchOfferteSessions, fetchSocialByPlatform, fetchDailySessions; response bevat `partialDay` en `compareUntilHour`. public/app.js + index.html + styles.css: melding onder kop Engagement en gedimde tegels bij partialDay. `node --check` geslaagd; nog te valideren tegen live GA4-data.
+
+## 2026-10-29 (Formulierinzending 26 okt ontbrak in dashboard)
+
+- Findings: GA4 had op 26 okt één `gforms_submission`, maar met kanaal "Unassigned" en 0 sessies; het dashboard telt de metric `sessions`, dus die inzending telde als 0. Op 27 en 28 okt vuurde alleen `form_submit` (geen `gforms_submission`), en dat event werd sinds 15 sept genegeerd.
+- Conclusions: Na 15 sept beide events tellen in één query (inListFilter, dus één keer per sessie), en elke rij met minstens één event telt minimaal 1, ook als GA4 er geen sessie aan koppelt.
+- Actions: index.js: `offerteEventParts` geeft nu `events`-lijsten; `fetchOfferteSessions` gebruikt `inListFilter`, vraagt ook `eventCount` op en telt `max(sessions, events>0 ? 1 : 0)`; `node --check` geslaagd. Gevalideerd tegen GA4-data via rapport (26/27/28 okt), nog niet tegen de live dashboard-output. Let op: gforms_submission vuurt niet bij elke inzending, de GTM/WPCode-trigger verdient een check.

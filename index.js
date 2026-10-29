@@ -317,18 +317,22 @@ const LEGACY_OFFERTE_EVENT = 'form_submit';
 const OFFERTE_EVENT_SWITCH_DATE = '2026-09-15';
 const LEGACY_LAST_DATE = '2026-09-14';
 
+// Both events are counted after the switch date: gforms_submission does not
+// fire on every submission (27 and 28 Oct only produced form_submit), so
+// filtering on a single event misses real offertes. One query with both event
+// names counts each session once, even when both events fired in it.
 function offerteEventParts(dateRange) {
   const parts = [];
   if (dateRange.start <= LEGACY_LAST_DATE) {
     parts.push({
-      event: LEGACY_OFFERTE_EVENT,
+      events: [LEGACY_OFFERTE_EVENT],
       start: dateRange.start,
       end: dateRange.end < LEGACY_LAST_DATE ? dateRange.end : LEGACY_LAST_DATE,
     });
   }
   if (dateRange.end >= OFFERTE_EVENT_SWITCH_DATE) {
     parts.push({
-      event: OFFERTE_EVENT,
+      events: [OFFERTE_EVENT, LEGACY_OFFERTE_EVENT],
       start: dateRange.start > OFFERTE_EVENT_SWITCH_DATE ? dateRange.start : OFFERTE_EVENT_SWITCH_DATE,
       end: dateRange.end,
     });
@@ -338,6 +342,10 @@ function offerteEventParts(dateRange) {
 
 // Sessions with a quote submission, grouped by one GA4 dimension. Returns
 // [{ key, count }] sorted by count, descending.
+//
+// GA4 sometimes records the event without a session (channel "Unassigned",
+// sessions = 0), as on 26 Oct. Such a row still holds a real submission, so
+// every row with at least one event counts for at least 1.
 async function fetchOfferteSessions(dateRange, dimension, extraFilters = []) {
   const parts = offerteEventParts(dateRange);
   const results = await Promise.all(
@@ -346,12 +354,12 @@ async function fetchOfferteSessions(dateRange, dimension, extraFilters = []) {
         property: `properties/${PROPERTY_ID}`,
         dateRanges: [{ startDate: part.start, endDate: part.end }],
         dimensions: [{ name: dimension }],
-        metrics: [{ name: 'sessions' }],
+        metrics: [{ name: 'sessions' }, { name: 'eventCount' }],
         dimensionFilter: withHourCap(dateRange, [
           {
             filter: {
               fieldName: 'eventName',
-              stringFilter: { matchType: 'EXACT', value: part.event },
+              inListFilter: { values: part.events },
             },
           },
           ...extraFilters,
@@ -364,7 +372,10 @@ async function fetchOfferteSessions(dateRange, dimension, extraFilters = []) {
   const totals = new Map();
   results.flat().forEach((row) => {
     const key = row.dimensionValues[0].value;
-    totals.set(key, (totals.get(key) || 0) + parseInt(row.metricValues[0].value, 10));
+    const sessions = parseInt(row.metricValues[0].value, 10);
+    const events = parseInt(row.metricValues[1].value, 10);
+    const count = Math.max(sessions, events > 0 ? 1 : 0);
+    totals.set(key, (totals.get(key) || 0) + count);
   });
 
   return [...totals.entries()]
