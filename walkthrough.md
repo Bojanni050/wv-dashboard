@@ -113,3 +113,9 @@
 - Findings: De `form_submit`-events van 27 en 28 okt waren testinzendingen van Bo en horen niet mee te tellen.
 - Conclusions: Na 15 sept weer alleen `gforms_submission`; de aanpassing voor inzendingen zonder sessie (26 okt) blijft staan.
 - Actions: index.js `offerteEventParts`: events na de switchdatum is weer alleen `[OFFERTE_EVENT]`; `node --check` geslaagd.
+
+## 2026-11-04 (Formulierinzending 3 nov ontbrak in dashboard)
+
+- Findings: Op 3 nov zijn alle formulieren op de site vervangen door Fluent Forms. GA4 heeft voor 3 en 4 nov geen `gforms_submission`, `form_submit`, `generate_lead` of `form_view`, alleen `form_start`. GTM-versie 23/24 (Fluent Forms tracking) stuurt bij een geslaagde inzending `generate_lead` (dataLayer `ff_form_success`), niet meer `gforms_submission`. De inzending van 3 nov is dus niet in GA4 aangekomen (de nieuwe tags stonden op dat moment waarschijnlijk nog niet live); of de tag werkt is nog niet met een echte inzending bevestigd.
+- Conclusions: Vanaf 4 nov telt het dashboard `generate_lead`. `generate_lead` is bruikbaar omdat de Fluent Forms-tag het alleen bij formuliersucces stuurt. De inzending van 3 nov blijft ontbreken in GA4 en is alleen handmatig toe te voegen.
+- Actions: index.js `offerteEventParts` kent nu drie periodes (form_submit, gforms_submission t/m 3 nov, generate_lead vanaf 4 nov); tooltips in public/app.js bijgewerkt; `node --check` geslaagd. Nog te doen: testinzending doen en controleren dat `generate_lead` in GA4 Realtime verschijnt; `generate_lead` staat in planning nog als te verwijderen key event (lib/planning.js).

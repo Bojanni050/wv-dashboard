@@ -317,24 +317,24 @@ const LEGACY_OFFERTE_EVENT = 'form_submit';
 const OFFERTE_EVENT_SWITCH_DATE = '2026-09-15';
 const LEGACY_LAST_DATE = '2026-09-14';
 
-// After the switch date only gforms_submission counts. form_submit still
-// fires on test submissions, so it must not be counted anymore.
+// Event per period: form_submit until 14 Sep, gforms_submission (Gravity
+// Forms) from 15 Sep until 3 Nov, and generate_lead (Fluent Forms, sent by the
+// GTM tag "GA4 - generate_lead (Fluent Forms)") from 4 Nov. form_submit still
+// fires on test submissions, so it must not be counted after 14 Sep.
+const GF_LAST_DATE = '2026-11-03';
+const FLUENT_SWITCH_DATE = '2026-11-04';
+const FLUENT_OFFERTE_EVENT = 'generate_lead';
+
 function offerteEventParts(dateRange) {
   const parts = [];
-  if (dateRange.start <= LEGACY_LAST_DATE) {
-    parts.push({
-      events: [LEGACY_OFFERTE_EVENT],
-      start: dateRange.start,
-      end: dateRange.end < LEGACY_LAST_DATE ? dateRange.end : LEGACY_LAST_DATE,
-    });
-  }
-  if (dateRange.end >= OFFERTE_EVENT_SWITCH_DATE) {
-    parts.push({
-      events: [OFFERTE_EVENT],
-      start: dateRange.start > OFFERTE_EVENT_SWITCH_DATE ? dateRange.start : OFFERTE_EVENT_SWITCH_DATE,
-      end: dateRange.end,
-    });
-  }
+  const add = (events, from, to) => {
+    const start = dateRange.start > from ? dateRange.start : from;
+    const end = dateRange.end < to ? dateRange.end : to;
+    if (start <= end) parts.push({ events, start, end });
+  };
+  add([LEGACY_OFFERTE_EVENT], '0000-00-00', LEGACY_LAST_DATE);
+  add([OFFERTE_EVENT], OFFERTE_EVENT_SWITCH_DATE, GF_LAST_DATE);
+  add([FLUENT_OFFERTE_EVENT], FLUENT_SWITCH_DATE, '9999-12-31');
   return parts;
 }
 
