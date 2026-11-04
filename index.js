@@ -338,6 +338,49 @@ function offerteEventParts(dateRange) {
   return parts;
 }
 
+// Quote submissions that GA4 never received (tracking gap) but that are
+// confirmed elsewhere, e.g. in Fluent Forms. They are added to the GA4 counts
+// so the dashboard stays complete. Add an entry only for a verified
+// submission; remove it when the data reaches GA4 after all.
+//   date: YYYY-MM-DD (Europe/Amsterdam), hour: 0-23
+const MANUAL_OFFERTES = [
+  {
+    date: '2026-11-03',
+    hour: 20,
+    pagePath: '/contact/',
+    sessionDefaultChannelGroup: 'Paid Search',
+    sessionCampaignName: 'Winteractie Bruiloft DJ 2027',
+    sessionSource: 'google',
+    note: 'Fluent Forms-inzending 3 nov 20:22; event kwam niet in GA4 aan (tags nog niet betrouwbaar).',
+  },
+];
+
+// Does a manual entry satisfy the extra GA4 filters of a query? Only plain
+// string filters on the entry's own fields are understood; anything else
+// excludes the entry so it can never appear in the wrong breakdown.
+function manualMatchesFilters(entry, filters) {
+  return filters.every((expr) => {
+    const f = expr && expr.filter;
+    if (!f || !f.stringFilter || !(f.fieldName in entry)) return false;
+    const { matchType, value } = f.stringFilter;
+    const actual = String(entry[f.fieldName]);
+    if (matchType === 'EXACT') return actual === value;
+    if (matchType === 'BEGINS_WITH') return actual.startsWith(value);
+    return false;
+  });
+}
+
+function manualOfferteRows(dateRange, dimension, extraFilters) {
+  return MANUAL_OFFERTES.filter(
+    (e) =>
+      e.date >= dateRange.start &&
+      e.date <= dateRange.end &&
+      (dateRange.hourCap === undefined || e.hour <= dateRange.hourCap) &&
+      e[dimension] !== undefined &&
+      manualMatchesFilters(e, extraFilters)
+  ).map((e) => e[dimension]);
+}
+
 // Sessions with a quote submission, grouped by one GA4 dimension. Returns
 // [{ key, count }] sorted by count, descending.
 //
@@ -374,6 +417,10 @@ async function fetchOfferteSessions(dateRange, dimension, extraFilters = []) {
     const events = parseInt(row.metricValues[1].value, 10);
     const count = Math.max(sessions, events > 0 ? 1 : 0);
     totals.set(key, (totals.get(key) || 0) + count);
+  });
+
+  manualOfferteRows(dateRange, dimension, extraFilters).forEach((key) => {
+    totals.set(key, (totals.get(key) || 0) + 1);
   });
 
   return [...totals.entries()]
