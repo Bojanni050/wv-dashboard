@@ -716,6 +716,19 @@ tbody tr:hover td {
   color: var(--text-muted);
 }
 
+.info-body p {
+  margin: 0 0 12px;
+}
+
+.info-body p:last-child {
+  margin-bottom: 0;
+}
+
+.info-body strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
 /* Responsive */
 @media (max-width: 900px) {
   .dashboard {

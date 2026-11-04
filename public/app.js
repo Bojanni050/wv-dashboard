@@ -601,38 +601,145 @@
   }
 
   // --- Widget info sidebar ---
+  // Paragraphs are separated by a blank line (\n\n). A paragraph that starts
+  // with one of INFO_LABELS gets that label in bold (see renderInfoBody).
   var widgetInfo = {
-    sessions: 'Aantal sessies (bezoeken) op de website in de geselecteerde periode, gemeten via Google Analytics 4.',
-    users: 'Aantal unieke gebruikers dat de website heeft bezocht in de geselecteerde periode.',
-    pageviews: 'Totaal aantal paginaweergaven in de geselecteerde periode.',
-    offertes: 'Aantal sessies waarin een offerteaanvraag is ingediend. Per sessie maximaal één keer geteld, omdat de formulier-events soms meerdere keren vuren. Vóór 15 september 2026 is het event "form_submit" gebruikt, tot en met 3 november "gforms_submission", daarna "generate_lead" (Fluent Forms).',
-    paidAds: 'Aantal sessies via betaalde advertenties: elk GA4-kanaal dat begint met "Paid", zoals Paid Search en Paid Social.',
-    social: 'Aantal sessies via organisch social verkeer (Organic Social kanaal) — dus niet via betaalde social ads.',
-    search: 'Aantal sessies via organische zoekresultaten (Organic Search kanaal).',
-    overig: 'Aantal sessies via overige kanalen: Direct, Referral, Organic Video en niet-geclassificeerd verkeer.',
-    conversionTotal: 'Percentage van alle gebruikers dat een offerteaanvraag heeft ingediend: offertes gedeeld door totaal aantal gebruikers.',
-    conversionPaid: 'Conversieratio van bezoekers via betaalde ads: sessies met een offerteaanvraag via betaalde kanalen gedeeld door sessies via betaalde kanalen. Vóór 15 september 2026 wordt hiervoor "form_submit" gebruikt (per sessie ontdubbeld), tot en met 3 november "gforms_submission", daarna "generate_lead" (Fluent Forms).',
-    formsTotal: 'Totaal aantal ingediende formulieren (offerteaanvragen) in de gekozen periode, ontdubbeld per sessie.',
-    conversionOverig: 'Conversieratio van bezoekers via overige kanalen (Direct, Referral, Organic Video en niet-geclassificeerd): sessies met een ingediend formulier gedeeld door sessies via overige kanalen.',
-    conversionSocial: 'Conversieratio van bezoekers via organic social: offerteaanvragen via Organic Social gedeeld door sessies via Organic Social.',
-    conversionFacebook: 'Conversieratio van bezoekers via Facebook (organic): offerteaanvragen gedeeld door sessies vanuit Facebook.',
-    conversionInstagram: 'Conversieratio van bezoekers via Instagram (organic): offerteaanvragen gedeeld door sessies vanuit Instagram.',
-    conversionLinkedin: 'Conversieratio van bezoekers via LinkedIn (organic): offerteaanvragen gedeeld door sessies vanuit LinkedIn.',
-    avgSessionDuration: 'Gemiddelde tijd die een bezoeker per sessie op de site doorbrengt (GA4 averageSessionDuration), weergegeven als minuten:seconden.',
-    pagesPerSession: 'Gemiddeld aantal paginaweergaven per sessie (GA4 screenPageViewsPerSession).',
-    engagementRate: 'Percentage sessies dat als "engaged" telt: langer dan 10 seconden actief, een conversie-event of minimaal 2 paginaweergaven.',
-    bounceRate: 'Percentage sessies dat niet als engaged telt (GA4 bounceRate). Let op: een stijging is hier ongunstig.',
-    dailySessions: 'Dagelijks aantal sessies in de geselecteerde periode, vergeleken met dezelfde periode ervoor.',
-    channelDonut: 'Verdeling van sessies over de GA4-kanalen (Direct, Organic Search, Paid Search, Referral, etc.) in de geselecteerde periode.',
-    offerteByPage: 'Aantal offerteaanvragen per pagina waarop het formulier is ingevuld.',
-    offerteByChannel: 'Aantal offerteaanvragen per GA4-kanaal (Direct, Organic Search, Paid Search, Paid Social, Referral, etc.). Hiermee zie je direct of bezoekers die via een advertentie binnenkwamen ook daadwerkelijk het formulier hebben ingevuld.',
-    offerteByCampaign: 'Aantal offerteaanvragen via betaalde ads, gegroepeerd per campagnenaam (utm_campaign). Toont "(referral)" of "(not set)" wanneer de advertentie niet getagd is.',
-    gaClicks: 'Aantal klikken op de Google Ads-campagnes in de geselecteerde periode. Deze data komt automatisch via Windsor.ai.',
-    gaCostOfClicks: 'Totale advertentiekosten van de Google Ads-klikken in de geselecteerde periode. Deze data komt automatisch via Windsor.ai.',
-    gaCostPerClick: 'Gemiddelde kost per klik (CPC) op de Google Ads-campagnes in de geselecteerde periode. Deze data komt automatisch via Windsor.ai.',
-    gaActiveCampaigns: 'Google Ads-campagnes die nu lopen, met de totalen sinds de start van de campagne. Opgehaald via Windsor.ai.',
-    gaClosedCampaigns: 'Google Ads-campagnes die niet meer lopen (gepauzeerd, verwijderd of afgelopen), met de totalen over hun volledige looptijd. Opgehaald via Windsor.ai.',
+    sessions:
+      'Wat het is: het aantal sessies, oftewel bezoeken, aan de website in de gekozen periode. Eén persoon kan meerdere sessies hebben.\n\n' +
+      'Hoe het wordt berekend: Google Analytics 4 (GA4) telt een nieuwe sessie zodra iemand de site opent en er daarvoor minstens 30 minuten niets is gebeurd. Het cijfer komt rechtstreeks uit GA4.\n\n' +
+      'Zo lees je het: dit is de belangrijkste maat voor hoeveel verkeer de site krijgt. Kijk naar de trend en niet naar één dag; in het weekend en in de avond schommelt het nu eenmaal.',
+    users:
+      'Wat het is: het aantal verschillende bezoekers (GA4 "totale gebruikers") dat de site in de gekozen periode heeft bezocht.\n\n' +
+      'Hoe het wordt berekend: GA4 herkent een bezoeker aan een cookie op het apparaat. Dezelfde persoon op telefoon én laptop telt dus als twee gebruikers, en iemand die cookies weigert wordt niet altijd gevolgd.\n\n' +
+      'Zo lees je het: het aantal gebruikers is lager dan of gelijk aan het aantal sessies. Is het verschil groot, dan komen bezoekers vaker terug.',
+    pageviews:
+      'Wat het is: het totale aantal bekeken pagina’s in de gekozen periode.\n\n' +
+      'Hoe het wordt berekend: elke keer dat een pagina wordt geladen, telt als één weergave. Dezelfde pagina meerdere keren bekijken telt dus meerdere keren.\n\n' +
+      'Zo lees je het: deel het cijfer door het aantal sessies en je krijgt het aantal pagina’s per sessie. Dat zie je ook in de tegel "Pagina’s per sessie".',
+    offertes:
+      'Wat het is: het aantal sessies waarin een offerteaanvraag is ingediend.\n\n' +
+      'Hoe het wordt berekend: het dashboard telt per sessie maximaal één inzending, omdat de formulier-events soms meerdere keren vuren. Welk GA4-event telt, hangt van de periode af: tot en met 14 september 2026 "form_submit", van 15 september tot en met 3 november "gforms_submission" (Gravity Forms) en vanaf 4 november "generate_lead" (Fluent Forms). Testinzendingen met "form_submit" tellen na 14 september niet meer mee.\n\n' +
+      'Let op: soms registreert GA4 een inzending zonder sessie. Zo’n inzending telt toch als 1. Een inzending die GA4 helemaal niet heeft ontvangen, is handmatig toegevoegd (3 november, Paid Search); die staat in de lijst met handmatige conversies in de code.\n\n' +
+      'Zo lees je het: het zijn aanvragen, geen omzet. Kleine aantallen schommelen sterk; één aanvraag meer of minder verandert het percentage al flink.',
+    paidAds:
+      'Wat het is: het aantal sessies via betaalde advertenties.\n\n' +
+      'Hoe het wordt berekend: elk GA4-standaardkanaal waarvan de naam met "Paid" begint telt mee, zoals Paid Search en Paid Social. GA4 bepaalt het kanaal aan de hand van de herkomst van de bezoeker (UTM-tags of de automatische Google Ads-tag).\n\n' +
+      'Zo lees je het: wijkt dit sterk af van het aantal klikken in Google Ads, dan liggen daar vaak de oorzaken: bezoekers die de pagina verlaten voordat GA4 laadt, adblockers en geweigerde cookies. Een klein verschil is normaal.',
+    social:
+      'Wat het is: het aantal sessies via organisch social verkeer (GA4-kanaal "Organic Social"), dus niet via betaalde social-advertenties.\n\n' +
+      'Hoe het wordt berekend: GA4 rekent bezoekers uit sociale netwerken, zoals Facebook, Instagram en LinkedIn, tot dit kanaal als ze niet via een advertentie kwamen.\n\n' +
+      'Zo lees je het: bezoeken via Instagram-verhalen of in-app browsers worden soms als "Direct" of onder een andere bron gezet, dus dit cijfer kan lager uitvallen dan wat je in de app zelf ziet.',
+    search:
+      'Wat het is: het aantal sessies via gewone (niet betaalde) zoekresultaten, vooral Google (GA4-kanaal "Organic Search").\n\n' +
+      'Hoe het wordt berekend: bezoekers die op een zoekresultaat klikken, tellen hier mee. Zoekadvertenties zitten er niet in; die staan onder betaalde advertenties.\n\n' +
+      'Zo lees je het: een stijging betekent meestal dat de site beter vindbaar is geworden. Het reageert traag op wijzigingen, dus kijk naar een langere periode.',
+    overig:
+      'Wat het is: het aantal sessies via alle overige kanalen.\n\n' +
+      'Hoe het wordt berekend: onder Overig vallen Direct (iemand typt het adres in of komt uit een bladwijzer), Referral (een link op een andere site), Organic Video en verkeer dat GA4 niet kan indelen ("Unassigned").\n\n' +
+      'Zo lees je het: een groot aandeel Direct kan ook verkeer zijn waarvan de herkomst niet is bijgehouden, bijvoorbeeld uit WhatsApp of e-mail zonder UTM-tags.',
+    conversionTotal:
+      'Wat het is: het percentage bezoekers dat een offerteaanvraag heeft ingediend.\n\n' +
+      'Hoe het wordt berekend: aantal offerteaanvragen gedeeld door het totale aantal gebruikers (niet sessies) in dezelfde periode, afgerond op één decimaal.\n\n' +
+      'Zo lees je het: dit is een ruwe maat. Een deel van de gebruikers komt alleen voor informatie en wil geen offerte. Het cijfer is vooral nuttig om periodes met elkaar te vergelijken.',
+    conversionPaid:
+      'Wat het is: het percentage bezoekers via betaalde advertenties dat een offerteaanvraag heeft ingediend.\n\n' +
+      'Hoe het wordt berekend: sessies met een offerteaanvraag via betaalde kanalen gedeeld door alle sessies via betaalde kanalen. Per sessie telt een inzending maximaal één keer.\n\n' +
+      'Welk event telt: voor 15 september 2026 "form_submit" (per sessie ontdubbeld), tot en met 3 november "gforms_submission", vanaf 4 november "generate_lead" (Fluent Forms).\n\n' +
+      'Zo lees je het: dit zegt hoe goed advertentieverkeer omzet in aanvragen. Bij weinig sessies is het percentage onbetrouwbaar; een hoog percentage met 3 sessies zegt niet veel.',
+    formsTotal:
+      'Wat het is: het totale aantal ingediende formulieren (offerteaanvragen) in de gekozen periode.\n\n' +
+      'Hoe het wordt berekend: dit is hetzelfde cijfer als "Offertes" bovenaan. Het is ontdubbeld per sessie: meerdere events binnen dezelfde sessie tellen als één aanvraag.\n\n' +
+      'Let op: het zijn alleen aanvragen die in GA4 zijn aangekomen, plus de handmatig toegevoegde conversie van 3 november. Een inzending die de tracking mist, ontbreekt hier. Je vindt ze ook in het formulierbeheer op WordPress.',
+    conversionOverig:
+      'Wat het is: het percentage bezoekers via overige kanalen (Direct, Referral, Organic Video en niet-geclassificeerd) dat een formulier heeft ingediend.\n\n' +
+      'Hoe het wordt berekend: sessies met een ingediend formulier via deze kanalen gedeeld door alle sessies via deze kanalen.\n\n' +
+      'Zo lees je het: bij Direct zitten vaak terugkerende bezoekers en klanten, dus dit percentage kan hoger of juist lager zijn dan bij betaald verkeer.',
+    conversionSocial:
+      'Wat het is: het percentage bezoekers via organisch social dat een offerteaanvraag heeft ingediend.\n\n' +
+      'Hoe het wordt berekend: offerteaanvragen via het kanaal Organic Social gedeeld door de sessies via Organic Social.\n\n' +
+      'Zo lees je het: social levert meestal veel bezoekers met weinig aanvragen. Let op kleine aantallen: één aanvraag verandert het percentage meteen sterk.',
+    conversionFacebook:
+      'Wat het is: het percentage bezoekers vanuit Facebook (organisch) dat een offerteaanvraag heeft ingediend.\n\n' +
+      'Hoe het wordt berekend: aanvragen via Organic Social met een bron die "facebook" bevat (zoals "facebook" of "l.facebook.com") of "fb", gedeeld door de sessies met die bron.\n\n' +
+      'Zo lees je het: kijk vooral naar de trend over meerdere weken; bij een paar sessies per dag is het percentage onbetrouwbaar.',
+    conversionInstagram:
+      'Wat het is: het percentage bezoekers vanuit Instagram (organisch) dat een offerteaanvraag heeft ingediend.\n\n' +
+      'Hoe het wordt berekend: aanvragen via Organic Social met een bron die "instagram" bevat of "ig" is, gedeeld door de sessies met die bron.\n\n' +
+      'Zo lees je het: bezoeken uit de Instagram-app komen niet altijd met de juiste bron binnen, dus het kan een deel van het echte verkeer missen.',
+    conversionLinkedin:
+      'Wat het is: het percentage bezoekers vanuit LinkedIn (organisch) dat een offerteaanvraag heeft ingediend.\n\n' +
+      'Hoe het wordt berekend: aanvragen via Organic Social met een bron die "linkedin" bevat of "lnkd.in" is, gedeeld door de sessies met die bron.\n\n' +
+      'Zo lees je het: het verkeer vanuit LinkedIn is klein, dus één aanvraag maakt het percentage al heel hoog.',
+    avgSessionDuration:
+      'Wat het is: hoe lang een bezoeker gemiddeld op de site blijft per sessie, in minuten:seconden.\n\n' +
+      'Hoe het wordt berekend: GA4 berekent de duur uit het tijdsverschil tussen het eerste en het laatste event van de sessie (averageSessionDuration). Een bezoek waarin maar één moment is gemeten, telt als 0 seconden.\n\n' +
+      'Zo lees je het: een langere duur is meestal goed, maar een korte duur is niet per se slecht, bijvoorbeeld als iemand snel het telefoonnummer vindt.',
+    pagesPerSession:
+      'Wat het is: het gemiddelde aantal pagina’s dat een bezoeker per sessie bekijkt.\n\n' +
+      'Hoe het wordt berekend: het totale aantal paginaweergaven gedeeld door het aantal sessies (GA4 screenPageViewsPerSession).\n\n' +
+      'Zo lees je het: een hoger getal betekent dat bezoekers meer rondkijken. Dat is positief als het gaat om het zoeken naar informatie, maar kan ook betekenen dat bezoekers moeite hebben om iets te vinden.',
+    engagementRate:
+      'Wat het is: het percentage sessies waarin de bezoeker echt iets met de site doet.\n\n' +
+      'Hoe het wordt berekend: een sessie telt als "betrokken" als hij langer dan 10 seconden actief was, een conversie bevat (zoals een formulierinzending) of minstens 2 paginaweergaven heeft.\n\n' +
+      'Zo lees je het: hoe hoger, hoe beter. Het is het omgekeerde van het bouncepercentage: samen zijn ze 100%.\n\n' +
+      'Let op: bij "Vandaag" levert GA4 deze cijfers met vertraging; ze zijn dan voorlopig en kunnen later nog stijgen.',
+    bounceRate:
+      'Wat het is: het percentage sessies waarin de bezoeker niet echt iets deed: niet langer dan 10 seconden actief, hooguit één pagina bekeken en geen conversie.\n\n' +
+      'Hoe het wordt berekend: 100% min het betrokkenheidspercentage (GA4 bounceRate).\n\n' +
+      'Zo lees je het: let op, hier is een stijging ongunstig, dus een groene pijl omlaag is goed. Een hoog percentage kan normaal zijn voor een pagina waar bezoekers snel hun antwoord vinden.\n\n' +
+      'Let op: bij "Vandaag" zijn deze cijfers voorlopig.',
+    dailySessions:
+      'Wat het is: het aantal sessies per dag in de gekozen periode, met de vergelijkingsperiode als tweede lijn.\n\n' +
+      'Hoe het wordt berekend: GA4 telt de sessies per kalenderdag. De vergelijkingsperiode (de periode ervoor, of een jaar eerder) is de tweede lijn, zodat je dag voor dag kunt vergelijken.\n\n' +
+      'Zo lees je het: let op pieken die samenhangen met campagnes of social posts, en op dalen in het weekend. Een enkele dag zegt weinig; de lijn als geheel is belangrijker.',
+    channelDonut:
+      'Wat het is: de verdeling van het verkeer over de herkomst van de bezoekers (Direct, Organic Search, Paid Search, Referral enzovoort).\n\n' +
+      'Hoe het wordt berekend: sessies per GA4-standaardkanaal in de gekozen periode, als aandeel van het totaal.\n\n' +
+      'Zo lees je het: het laat zien waar je verkeer vandaan komt. Een groot aandeel van één kanaal maakt je afhankelijk van die ene bron.',
+    offerteByPage:
+      'Wat het is: het aantal offerteaanvragen per pagina waarop het formulier is ingevuld.\n\n' +
+      'Hoe het wordt berekend: de pagina waarop het formulier-event is geregistreerd. Eén sessie kan op meer dan één pagina een aanvraag doen, dus de som van deze lijst kan hoger zijn dan het totaal aantal offertes.\n\n' +
+      'Zo lees je het: dit laat zien welke pagina’s de meeste aanvragen opleveren, bijvoorbeeld de contactpagina of een landingspagina.',
+    offerteByChannel:
+      'Wat het is: het aantal offerteaanvragen per GA4-kanaal (Direct, Organic Search, Paid Search, Paid Social, Referral enzovoort).\n\n' +
+      'Hoe het wordt berekend: het kanaal waarmee de sessie begon waarin de aanvraag is gedaan. Per sessie telt een aanvraag maximaal één keer.\n\n' +
+      'Zo lees je het: je ziet direct of bezoekers die via een advertentie binnenkwamen ook het formulier invullen. Aanvragen waarvan GA4 geen herkomst heeft, staan onder "Unassigned".',
+    offerteByCampaign:
+      'Wat het is: het aantal offerteaanvragen via betaalde advertenties, per campagne.\n\n' +
+      'Hoe het wordt berekend: alleen sessies uit betaalde kanalen, gegroepeerd op de campagnenaam die GA4 uit de advertentie-link haalt (UTM-tag of de gekoppelde Google Ads-campagne). Staat er "(referral)" of "(not set)", dan is de advertentie niet getagd of kon GA4 de campagne niet koppelen.\n\n' +
+      'Zo lees je het: dit laat zien welke campagne echt aanvragen oplevert en niet alleen klikken. Een campagne met veel klikken en geen aanvragen is een kandidaat voor aanpassing.',
+    gaClicks:
+      'Wat het is: het aantal klikken op je Google Ads-advertenties in de gekozen periode.\n\n' +
+      'Hoe het wordt berekend: dit komt uit Google Ads, via Windsor.ai. Het zijn klikken, geen bezoeken; GA4 telt daar sessies bij.\n\n' +
+      'Zo lees je het: het aantal klikken is meestal iets hoger dan het aantal sessies via Paid Search in GA4. Dat komt door dubbelklikken, bezoekers die weggaan voordat de pagina laadt en bezoekers die cookies of tracking blokkeren.',
+    gaCostOfClicks:
+      'Wat het is: wat je in de gekozen periode hebt uitgegeven aan Google Ads.\n\n' +
+      'Hoe het wordt berekend: de totale kosten van de klikken, opgehaald uit Google Ads via Windsor.ai.\n\n' +
+      'Zo lees je het: zet de kosten naast het aantal offerteaanvragen via betaald verkeer om te zien wat een aanvraag kost. Het cijfer kan een dag achterlopen of kleine afwijkingen hebben ten opzichte van de Google Ads-omgeving zelf.',
+    gaCostPerClick:
+      'Wat het is: wat een klik gemiddeld kost (CPC).\n\n' +
+      'Hoe het wordt berekend: totale kosten gedeeld door het aantal klikken, opgehaald uit Google Ads via Windsor.ai.\n\n' +
+      'Zo lees je het: een lagere CPC is gunstig, maar zegt niets over de kwaliteit van de bezoekers. Beoordeel hem samen met het aantal aanvragen.',
+    gaActiveCampaigns:
+      'Wat het is: de Google Ads-campagnes die nu lopen.\n\n' +
+      'Hoe het wordt berekend: per campagne de totalen sinds de start van de campagne, niet alleen voor de gekozen periode. Opgehaald uit Google Ads via Windsor.ai.\n\n' +
+      'Zo lees je het: je ziet welke campagnes tot nu toe het meeste hebben gekost en opgeleverd.',
+    gaClosedCampaigns:
+      'Wat het is: de Google Ads-campagnes die niet meer lopen (gepauzeerd, verwijderd of afgelopen).\n\n' +
+      'Hoe het wordt berekend: per campagne de totalen over de hele looptijd, opgehaald uit Google Ads via Windsor.ai.\n\n' +
+      'Zo lees je het: handig om afgesloten campagnes terug te kijken en te vergelijken met de campagnes die nu lopen.',
   };
+
+  // Keys of the tiles that show a percentage change next to the value.
+  var INFO_COMPARE_KEYS = [
+    'sessions', 'users', 'pageviews', 'offertes', 'paidAds', 'social', 'search', 'overig',
+    'formsTotal', 'conversionTotal', 'conversionPaid', 'conversionOverig', 'conversionSocial',
+    'conversionFacebook', 'conversionInstagram', 'conversionLinkedin',
+    'avgSessionDuration', 'pagesPerSession', 'engagementRate', 'bounceRate',
+  ];
+  var INFO_COMPARE_NOTE =
+    'Vergelijking: het percentage naast het cijfer vergelijkt met de vergelijkingsperiode die je bovenaan hebt gekozen (de periode ervoor, of dezelfde periode een jaar eerder).';
+  var INFO_LABELS = ['Wat het is', 'Hoe het wordt berekend', 'Zo lees je het', 'Let op', 'Welk event telt', 'Vergelijking'];
 
   var infoSidebar = document.getElementById('infoSidebar');
   var infoOverlay = document.getElementById('infoOverlay');
@@ -641,6 +748,26 @@
   var infoClose = document.getElementById('infoClose');
   var lastFocusedEl = null;
 
+  // Builds the sidebar text: one <p> per paragraph, with a bold lead-in label.
+  function renderInfoBody(key, description) {
+    var paragraphs = description.split('\n\n');
+    if (INFO_COMPARE_KEYS.indexOf(key) !== -1) paragraphs.push(INFO_COMPARE_NOTE);
+    infoBody.textContent = '';
+    paragraphs.forEach(function (text) {
+      var p = document.createElement('p');
+      var label = INFO_LABELS.find(function (l) { return text.indexOf(l + ':') === 0; });
+      if (label) {
+        var strong = document.createElement('strong');
+        strong.textContent = label + ':';
+        p.appendChild(strong);
+        p.appendChild(document.createTextNode(text.slice(label.length + 1)));
+      } else {
+        p.textContent = text;
+      }
+      infoBody.appendChild(p);
+    });
+  }
+
   function openInfoSidebar(titleEl) {
     var key = titleEl.dataset.info;
     var description = widgetInfo[key];
@@ -648,7 +775,7 @@
 
     lastFocusedEl = titleEl;
     infoTitle.textContent = titleEl.textContent;
-    infoBody.textContent = description;
+    renderInfoBody(key, description);
     infoSidebar.classList.add('open');
     infoOverlay.classList.add('open');
     infoSidebar.setAttribute('aria-hidden', 'false');

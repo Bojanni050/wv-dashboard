@@ -125,3 +125,9 @@
 - Findings: De Fluent Forms-inzending van 3 nov 20:22 (Paid Search, campagne "Winteractie Bruiloft DJ 2027", /contact/, met gclid) is niet in GA4 aangekomen: wel `page_view` en `form_start`, geen `form_view` of `generate_lead`. GTM-versie 24 stond sinds ca. 13:30 live; oorzaak dat de Fluent Forms-tags bij echte bezoekers niet vuurden is niet vastgesteld.
 - Conclusions: De inzending is bevestigd in Fluent Forms en wordt als handmatige conversie bij GA4 opgeteld, zodat periode-, kanaal-, campagne- en paginacijfers kloppen. Google Ads-kant (offline import via gclid) staat los hiervan en is nog niet gedaan.
 - Actions: index.js: `MANUAL_OFFERTES`, `manualMatchesFilters`, `manualOfferteRows`; `fetchOfferteSessions` telt de handmatige rijen mee (rekening houdend met datumbereik, hourCap en extra filters). `node --check` en een droogtest van de filterlogica geslaagd; nog niet tegen de live dashboard-output gevalideerd. GTM versie 25 (FF-listener op DOM Ready) is gepubliceerd. Verwijder de entry als de data alsnog in GA4 komt.
+
+## 2026-11-04 (Uitgebreidere uitleg bij de cijfers)
+
+- Findings: De zijbalk die opent bij een klik op een tegel of grafiek toonde één korte zin per cijfer.
+- Conclusions: Per cijfer nu vier korte alinea's: wat het is, hoe het wordt berekend, zo lees je het en waar je op moet letten (bij tegels met een percentage ook een uitleg over de vergelijkingsperiode). Alle teksten zijn gebaseerd op wat de code in index.js daadwerkelijk telt (o.a. de event-periodes voor offertes, de kanaalindeling en de handmatige conversie).
+- Actions: public/app.js: `widgetInfo` herschreven, `renderInfoBody` (alinea's met vetgedrukt label); public/index.html: `#infoBody` van `<p>` naar `<div>`; public/styles.css: alinea-opmaak. Gecontroleerd in Chromium met een statische kopie (zijbalk opent, 5 alinea's met labels, geen JS-fouten); niet getest met live GA4-data.
