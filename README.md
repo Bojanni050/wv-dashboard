@@ -19,8 +19,9 @@ campagne"** onderaan het dashboard:
 ## Google Ads
 
 De cijfers op de tab **Google Ads** (en in de week-/maandrapporten) komen
-automatisch uit Google Ads via [Windsor.ai](https://windsor.ai) — niet meer
-handmatig ingevuld. De bovenste **vijf tegels** (klikken, kosten, kost per klik,
+automatisch uit Google Ads — niet meer handmatig ingevuld. De bron is de eigen
+analytics-service (dezelfde als Adlytica gebruikt), met [Windsor.ai](https://windsor.ai)
+als fallback. De bovenste **vijf tegels** (klikken, kosten, kost per klik,
 bezoekers via Paid Ads, conversie betaalde bezoekers) volgen de **periodeselector
 in de menubalk**. Daaronder twee campagne-tabellen die juist totalen tonen:
 
@@ -28,10 +29,21 @@ in de menubalk**. Daaronder twee campagne-tabellen die juist totalen tonen:
 - **Afgesloten campagnes** — campagnes die niet meer lopen (gepauzeerd,
   verwijderd of afgelopen), met de totalen over hun volledige looptijd.
 
-Lopend/afgesloten wordt bepaald uit Google Ads' `campaign_status` in combinatie
-met `start_date`/`end_date`.
+Lopend/afgesloten wordt bepaald uit de campagnestatus (en bij Windsor ook uit
+`start_date`/`end_date`). De analytics-service levert geen start- en einddatum;
+daar geldt een `ENABLED` campagne als lopend en geldt de eerste dag met
+vertoningen of kosten als startdatum.
 
-Instellen:
+Instellen via de analytics-service (aanbevolen, geen accountlimiet van Windsor):
+
+1. Log één keer in met Google in Adlytica (Instellingen → Databron).
+2. Kopieer uit Adlytica's `config.json` het refresh token en client id naar
+   `ADS_SERVICE_REFRESH_TOKEN` en `ADS_SERVICE_CLIENT_ID` in `.env`.
+3. Zet het customer id (met streepjes) in `GOOGLE_ADS_ACCOUNT`.
+
+Het refresh token staat daarmee ook in `.env`: behandel dat bestand als geheim.
+
+Instellen via Windsor (fallback als de drie waarden hierboven ontbreken):
 
 1. Maak een Windsor.ai-account en koppel daar één keer het Google Ads-account
    (OAuth) in hun dashboard.
