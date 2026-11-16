@@ -710,23 +710,23 @@
       'Zo lees je het: dit laat zien welke campagne echt aanvragen oplevert en niet alleen klikken. Een campagne met veel klikken en geen aanvragen is een kandidaat voor aanpassing.',
     gaClicks:
       'Wat het is: het aantal klikken op je Google Ads-advertenties in de gekozen periode.\n\n' +
-      'Hoe het wordt berekend: dit komt uit Google Ads, via Windsor.ai. Het zijn klikken, geen bezoeken; GA4 telt daar sessies bij.\n\n' +
+      'Hoe het wordt berekend: dit komt uit Google Ads. Het zijn klikken, geen bezoeken; GA4 telt daar sessies bij.\n\n' +
       'Zo lees je het: het aantal klikken is meestal iets hoger dan het aantal sessies via Paid Search in GA4. Dat komt door dubbelklikken, bezoekers die weggaan voordat de pagina laadt en bezoekers die cookies of tracking blokkeren.',
     gaCostOfClicks:
       'Wat het is: wat je in de gekozen periode hebt uitgegeven aan Google Ads.\n\n' +
-      'Hoe het wordt berekend: de totale kosten van de klikken, opgehaald uit Google Ads via Windsor.ai.\n\n' +
+      'Hoe het wordt berekend: de totale kosten van de klikken, opgehaald uit Google Ads.\n\n' +
       'Zo lees je het: zet de kosten naast het aantal offerteaanvragen via betaald verkeer om te zien wat een aanvraag kost. Het cijfer kan een dag achterlopen of kleine afwijkingen hebben ten opzichte van de Google Ads-omgeving zelf.',
     gaCostPerClick:
       'Wat het is: wat een klik gemiddeld kost (CPC).\n\n' +
-      'Hoe het wordt berekend: totale kosten gedeeld door het aantal klikken, opgehaald uit Google Ads via Windsor.ai.\n\n' +
+      'Hoe het wordt berekend: totale kosten gedeeld door het aantal klikken, opgehaald uit Google Ads.\n\n' +
       'Zo lees je het: een lagere CPC is gunstig, maar zegt niets over de kwaliteit van de bezoekers. Beoordeel hem samen met het aantal aanvragen.',
     gaActiveCampaigns:
       'Wat het is: de Google Ads-campagnes die nu lopen.\n\n' +
-      'Hoe het wordt berekend: per campagne de totalen sinds de start van de campagne, niet alleen voor de gekozen periode. Opgehaald uit Google Ads via Windsor.ai.\n\n' +
+      'Hoe het wordt berekend: per campagne de totalen sinds de start van de campagne, niet alleen voor de gekozen periode. Opgehaald uit Google Ads.\n\n' +
       'Zo lees je het: je ziet welke campagnes tot nu toe het meeste hebben gekost en opgeleverd.',
     gaClosedCampaigns:
       'Wat het is: de Google Ads-campagnes die niet meer lopen (gepauzeerd, verwijderd of afgelopen).\n\n' +
-      'Hoe het wordt berekend: per campagne de totalen over de hele looptijd, opgehaald uit Google Ads via Windsor.ai.\n\n' +
+      'Hoe het wordt berekend: per campagne de totalen over de hele looptijd, opgehaald uit Google Ads.\n\n' +
       'Zo lees je het: handig om afgesloten campagnes terug te kijken en te vergelijken met de campagnes die nu lopen.',
   };
 
