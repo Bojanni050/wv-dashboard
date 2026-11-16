@@ -353,6 +353,13 @@ const MANUAL_OFFERTES = [
     sessionSource: 'google',
     note: 'Fluent Forms-inzending 3 nov 20:22; event kwam niet in GA4 aan (tags nog niet betrouwbaar).',
   },
+  {
+    date: '2026-11-14',
+    hour: 17,
+    pagePath: '/artiesten-entertainment/',
+    sessionDefaultChannelGroup: 'Unassigned',
+    note: 'Fluent Forms-inzending 14 nov 17:50; bezoeker gaf geen toestemming voor analytics, dus geen GA4-event en geen bron bekend.',
+  },
 ];
 
 // Does a manual entry satisfy the extra GA4 filters of a query? Only plain
