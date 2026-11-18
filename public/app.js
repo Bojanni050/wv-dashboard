@@ -38,7 +38,8 @@
     unlockUI();
     if (booted) return;
     booted = true;
-    fetchRole();
+    // Restore the tab after the role is known, so #ai works for admins.
+    fetchRole().then(restoreTab);
     load(currentRange, currentCompare, currentCustomRange);
     scheduleAutoRefresh();
   }
@@ -898,29 +899,55 @@
   var reportsLoaded = false;
   var aiLoaded = false;
 
+  function showTab(tab) {
+    var btn = document.querySelector('.tab-btn[data-tab="' + tab + '"]');
+    if (!btn || btn.hidden) return false;
+    document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+
+    document.getElementById('dashboardView').hidden = tab !== 'dashboard';
+    document.getElementById('googleadsView').hidden = tab !== 'googleads';
+    document.getElementById('planningView').hidden = tab !== 'planning';
+    document.getElementById('reportsView').hidden = tab !== 'reports';
+    document.getElementById('aiView').hidden = tab !== 'ai';
+    if (tab === 'dashboard') loadExplanation();
+
+    if (tab === 'ai' && !aiLoaded) {
+      aiLoaded = true;
+      loadAiSettings();
+    }
+    if (tab === 'planning') loadPlanning();
+    if (tab === 'reports' && !reportsLoaded) {
+      reportsLoaded = true;
+      loadReports();
+    }
+    return true;
+  }
+
+  // Remember the open tab in the URL (#planning etc.) so a refresh stays on it.
+  function tabFromHash() {
+    return decodeURIComponent((location.hash || '').replace(/^#/, ''));
+  }
+
+  function restoreTab() {
+    var tab = tabFromHash();
+    if (tab && tab !== 'dashboard') showTab(tab);
+  }
+
   document.querySelectorAll('.tab-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {
-      document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
-      btn.classList.add('active');
-
       var tab = btn.dataset.tab;
-      document.getElementById('dashboardView').hidden = tab !== 'dashboard';
-      document.getElementById('googleadsView').hidden = tab !== 'googleads';
-      document.getElementById('planningView').hidden = tab !== 'planning';
-      document.getElementById('reportsView').hidden = tab !== 'reports';
-      document.getElementById('aiView').hidden = tab !== 'ai';
-      if (tab === 'dashboard') loadExplanation();
-
-      if (tab === 'ai' && !aiLoaded) {
-        aiLoaded = true;
-        loadAiSettings();
-      }
-      if (tab === 'planning') loadPlanning();
-      if (tab === 'reports' && !reportsLoaded) {
-        reportsLoaded = true;
-        loadReports();
+      if (!showTab(tab)) return;
+      var hash = tab === 'dashboard' ? '' : '#' + tab;
+      if (location.hash !== hash) {
+        history.replaceState(null, '', location.pathname + location.search + hash);
       }
     });
+  });
+
+  window.addEventListener('hashchange', function () {
+    if (!booted) return;
+    showTab(tabFromHash() || 'dashboard');
   });
 
   // --- Planning ---
